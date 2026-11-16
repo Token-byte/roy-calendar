@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '1.0.0';
+const VERSION = '2.0.0';
 const CFG = window.APP_CONFIG || {};
 const TZ = CFG.TIME_ZONE || 'Asia/Jerusalem';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly';
@@ -22,12 +22,12 @@ const S = {
   calendars: LS.get('calendars', []),
   token: LS.get('gtoken', null),         // {access_token, exp}
   connected: LS.get('connected', false),
-  settings: Object.assign({ defaultReminder: 15, emailReminder: false, hebDate: true, city: '293397' }, LS.get('settings', {})),
+  settings: Object.assign({ defaultReminder: 15, emailReminder: false, gColor: true }, LS.get('settings', {})),
+  cats: LS.get('cats', null) || defaultCats(),
   fired: LS.get('fired', {}),
   view: 'month',
   sel: todayKey(),
   cursor: null, // first day of displayed month
-  holidays: {},
   syncing: false,
 };
 S.cursor = firstOfMonth(S.sel);
@@ -48,27 +48,59 @@ function fmtLong(k){ const d = parseKey(k); return 'יום '+HE_DAYS[d.getDay()]
 function dayStartMs(k){ return parseKey(k).getTime(); }
 function dayEndMs(k){ return parseKey(addDays(k,1)).getTime(); }
 
-/* Hebrew date */
-const hebFmt = new Intl.DateTimeFormat('he-u-ca-hebrew', { day:'numeric', month:'long', timeZone: TZ });
-function gematria(n){
-  if (n === 15) return 'ט״ו'; if (n === 16) return 'ט״ז';
-  const ones = ['','א','ב','ג','ד','ה','ו','ז','ח','ט'], tens = ['','י','כ','ל'];
-  const s = tens[Math.floor(n/10)] + ones[n%10];
-  return s.length === 1 ? s+'׳' : s.slice(0,-1)+'״'+s.slice(-1);
+/* ---------- categories (auto color by title) ---------- */
+function defaultCats(){
+  return [
+    { id:'sport', name:'ספורט', color:'#ff3b30', g:'11', kw:'אימון, כושר, חדר כושר, טיפוס, אגרוף, ריצה, ספורט, יוגה, פילאטיס, שחייה, כדורגל, כדורסל, טניס, הליכה, gym, workout, sport, climbing, boxing, run, yoga, swim, training, pilates' },
+    { id:'study', name:'לימודים', color:'#af52de', g:'3', kw:'קורס, לימודים, מבחן, פסיכומטרי, שיעור, הרצאה, תואר, אוניברסיטה, מכללה, רענון, study, course, exam, class, lecture, school' },
+    { id:'content', name:'תוכן', color:'#ff9500', g:'6', kw:'צילומים, צילום, עריכה, תוכן, סרטון, רילס, ריל, שוט, פוסט, filming, shoot, editing, edit, content, video, reel, clip' },
+    { id:'admin', name:'סידורים', color:'#c9a000', g:'5', kw:'רכב, מוסך, טסט, בנק, מס, מסים, מיסים, רשות המסים, רופא, רופאה, דרכון, ביטוח, תשלום, לשלם, סידורים, car, bank, tax, doctor, dentist, passport, insurance, pay' },
+    { id:'personal', name:'אישי', color:'#34c759', g:'2', kw:'אמא, אבא, משפחה, חברים, חברה שלי, בת זוג, בן זוג, טיול, יום הולדת, ארוחה, דייט, אחי, אחותי, סבתא, סבא, family, friends, mom, dad, trip, birthday, dinner, date' },
+    { id:'work', name:'עבודה ופגישות', color:'#0a84ff', g:'9', kw:'פגישה, עבודה, ראיון, שיחה, זום, לקוח, לקוחה, משמרת, ייעוץ, meeting, work, interview, call, zoom, client, meet, sync' },
+  ];
 }
-function hebDate(k){
-  const d = parseKey(k); d.setHours(12);
-  const parts = hebFmt.formatToParts(d);
-  const day = Number((parts.find(p=>p.type==='day')||{}).value);
-  const month = (parts.find(p=>p.type==='month')||{}).value || '';
-  return { day, month, short: gematria(day), full: gematria(day)+' '+month };
+const NEUTRAL = '#8e8e93';
+function saveCats(){ LS.set('cats', S.cats); catCache.clear(); }
+const HEB_PREFIX = /^[והבלמשכ]{1,2}/;
+function normWord(w){ return w.toLowerCase().replace(/[״׳"'`]/g, ''); }
+function kwMatches(kw, title, words){
+  kw = kw.trim().toLowerCase(); if (!kw) return false;
+  if (kw.includes(' ')) return title.includes(kw);
+  const stem = kw.length >= 4 && /[הת]$/.test(kw) ? kw.slice(0, -1) : kw;
+  for (const w of words){
+    const cands = [w];
+    if (/^[\u0590-\u05FF]/.test(w)){ const a = w.replace(/^[והבלמשכ]/, ''); cands.push(a, a.replace(/^[והבלמשכ]/, '')); }
+    for (const c of cands){
+      if (c === kw) return true;
+      if (kw.length >= 3 && c.startsWith(stem) && c.length - stem.length <= 3) return true;
+    }
+  }
+  return false;
+}
+const catCache = new Map();
+function categoryOf(title){
+  title = (title || '').toLowerCase();
+  if (catCache.has(title)) return catCache.get(title);
+  const words = title.split(/[\s,.\-–:;!?()\[\]/\\|+]+/).map(normWord).filter(Boolean);
+  let found = null;
+  for (const c of S.cats){ if (c.kw.split(',').some(k => kwMatches(k, title, words))){ found = c; break; } }
+  catCache.set(title, found); return found;
+}
+function catOfEvent(ev){
+  if (ev.cat){ const c = S.cats.find(c => c.id === ev.cat); if (c) return c; }
+  return categoryOf(ev.title);
+}
+function nearestGColor(hex){
+  const p = h => [1,3,5].map(i => parseInt(h.slice(i, i+2), 16));
+  const a = p(hex); let best = '8', bd = 1e9;
+  for (const [id, h] of Object.entries(GCOLORS)){ const b = p(h); const d = (a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2; if (d < bd){ bd = d; best = id; } }
+  return best;
 }
 
 /* ---------- events model ---------- */
 function evColor(ev){
-  if (ev.colorId && GCOLORS[ev.colorId]) return GCOLORS[ev.colorId];
-  const cal = S.calendars.find(c => c.id === ev.calId);
-  return (cal && cal.color) || LOCAL_COLOR;
+  const c = catOfEvent(ev);
+  return c ? c.color : NEUTRAL;
 }
 function evStartMs(ev){ return ev.allDay ? dayStartMs(ev.start) : new Date(ev.start).getTime(); }
 function evEndMs(ev){ return ev.allDay ? dayStartMs(ev.end) : new Date(ev.end).getTime(); }
@@ -98,6 +130,7 @@ function fromGoogle(g, cal){
     id: g.id, calId: cal.id, title: g.summary || '(ללא כותרת)', allDay,
     start: allDay ? g.start.date : g.start.dateTime, end: allDay ? g.end.date : g.end.dateTime,
     location: g.location || '', notes: g.description || '', colorId: g.colorId || null,
+    cat: (g.extendedProperties && g.extendedProperties.private && g.extendedProperties.private.royCat) || null,
     reminder, recurring: !!g.recurringEventId, readOnly: !['owner','writer'].includes(cal.accessRole),
     link: g.htmlLink || ''
   };
@@ -108,7 +141,9 @@ function toGoogle(ev){
     start: ev.allDay ? { date: ev.start } : { dateTime: new Date(ev.start).toISOString(), timeZone: TZ },
     end: ev.allDay ? { date: ev.end } : { dateTime: new Date(ev.end).toISOString(), timeZone: TZ },
   };
-  if (ev.colorId) body.colorId = String(ev.colorId);
+  const cat = catOfEvent(ev);
+  if (S.settings.gColor && cat) body.colorId = cat.g || nearestGColor(cat.color);
+  body.extendedProperties = { private: { royCat: ev.cat || '' } };
   const overrides = [];
   if (ev.reminder != null && ev.reminder >= 0){
     overrides.push({ method:'popup', minutes: ev.reminder });
@@ -235,7 +270,7 @@ async function sync(opts = {}){
   if (!navigator.onLine){ renderBanner(); return; }
   if (!tokenValid()){ renderBanner(); return; }
   if (S.syncing) return;
-  S.syncing = true; renderSyncDot();
+  S.syncing = true; 
   try {
     if (!S.calendars.length || opts.calendars || Date.now() - lastFullSync > 30*60000){ await loadCalendars(); lastFullSync = Date.now(); }
     await flushOps();
@@ -261,70 +296,25 @@ function queue(kind, ev){
   saveOps();
 }
 
-/* ---------- holidays (Hebcal) ---------- */
-async function loadHolidays(year){
-  const key = 'hebcal-' + year + '-' + S.settings.city;
-  const cached = LS.get(key, null);
-  if (cached && Date.now() - cached.t < 30*86400000){ mergeHolidays(cached.items); return; }
-  if (cached) mergeHolidays(cached.items);
-  try {
-    const q = new URLSearchParams({ v:'1', cfg:'json', maj:'on', min:'on', mod:'on', nx:'on', mf:'on', ss:'on', s:'on', c:'on', i:'on', lg:'he',
-      geo:'geoname', geonameid: S.settings.city, start: year+'-01-01', end: year+'-12-31' });
-    const r = await fetch('https://www.hebcal.com/hebcal?' + q);
-    const j = await r.json();
-    const items = (j.items || []).filter(i => ['holiday','roshchodesh','parashat','candles','havdalah'].includes(i.category))
-      .map(i => ({ date: i.date, cat: i.category, sub: i.subcat || '', t: (i.hebrew || i.title || '').replace(/: \d\d:\d\d$/, '') }));
-    LS.set(key, { t: Date.now(), items });
-    mergeHolidays(items);
-  } catch(e){ console.warn('hebcal', e); }
-}
-function mergeHolidays(items){
-  for (const i of items){
-    const k = i.date.slice(0,10);
-    const h = S.holidays[k] || (S.holidays[k] = { hol: [], parasha: '', candles: '', havdalah: '' });
-    const time = i.date.length > 10 ? i.date.slice(11,16) : '';
-    if (i.cat === 'candles') h.candles = time;
-    else if (i.cat === 'havdalah') h.havdalah = time;
-    else if (i.cat === 'parashat') h.parasha = i.t;
-    else {
-      const t = i.cat === 'roshchodesh' ? i.t : i.t;
-      if (!h.hol.includes(t)) h.hol.push(t);
-      if (i.sub === 'major' || i.sub === 'modern' || i.sub === 'fast') h.major = true;
-    }
-  }
-}
-const loadedYears = new Set();
-function ensureHolidays(k){
-  const y = Number(k.slice(0,4));
-  [y-1, y, y+1].forEach(yy => { if (!loadedYears.has(yy)){ loadedYears.add(yy); loadHolidays(yy).then(render); } });
-}
-
 /* ---------- rendering ---------- */
 const $ = (id) => document.getElementById(id);
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 function render(){
-  ensureHolidays(S.cursor);
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('active', b.dataset.view === S.view));
   $('monthView').classList.toggle('hidden', S.view !== 'month');
   $('dayView').classList.toggle('hidden', S.view !== 'day');
   $('listView').classList.toggle('hidden', S.view !== 'list');
   const titleKey = S.view === 'month' ? S.cursor : S.sel;
   const td = parseKey(titleKey);
-  $('title').innerHTML = esc(HE_MONTHS[td.getMonth()] + (td.getFullYear() !== new Date().getFullYear() ? ' ' + td.getFullYear() : '')) + '<span class="syncdot" id="syncdot"></span>';
-  renderSyncDot();
+  $('title').innerHTML = esc(HE_MONTHS[td.getMonth()]) + (td.getFullYear() !== new Date().getFullYear() ? '<small>' + td.getFullYear() + '</small>' : '');
   if (S.view === 'month') renderMonth();
   else if (S.view === 'day') renderDay();
   else renderList();
   renderBanner();
 }
-function renderSyncDot(){
-  const d = $('syncdot'); if (!d) return;
-  d.className = 'syncdot' + (S.syncing ? ' busy' : (S.connected && tokenValid() ? '' : ' off'));
-  d.title = S.syncing ? 'מסנכרן…' : (S.connected && tokenValid() ? 'מסונכרן עם גוגל' : 'לא מסונכרן');
-}
 function renderWeekdays(){
-  $('weekdays').innerHTML = HE_DAYS_SHORT.map((d,i) => `<div class="${i===6?'sat':''}">${d}</div>`).join('');
+  $('weekdays').innerHTML = HE_DAYS_SHORT.map((d,i) => `<div>${d}</div>`).join('');
 }
 function renderMonth(){
   const first = parseKey(S.cursor);
@@ -334,27 +324,18 @@ function renderMonth(){
   const grid = $('grid');
   grid.style.gridTemplateRows = `repeat(${weeks}, 1fr)`;
   const cellH = grid.clientHeight ? grid.clientHeight / weeks : 80;
-  const maxLines = Math.max(1, Math.floor((cellH - 32) / 15));
+  const maxLines = Math.max(1, Math.floor((cellH - 34) / 16));
   const tk = todayKey();
   let html = '';
   for (let i = 0; i < weeks*7; i++){
     const k = addDays(startKey, i), d = parseKey(k);
     const other = d.getMonth() !== first.getMonth();
-    const h = S.holidays[k];
     const evs = eventsForDay(k);
-    const lines = [];
-    if (h) h.hol.forEach(t => lines.push(`<div class="chip hol">${esc(t)}</div>`));
-    evs.forEach(ev => {
-      const c = evColor(ev);
-      lines.push(ev.allDay ? `<div class="chip" style="background:${c}">${esc(ev.title)}</div>`
-        : `<div class="chip timed" style="--c:${c}">${esc(ev.title)}</div>`);
-    });
+    const lines = evs.map(ev => `<div class="chip${ev.allDay ? ' allday' : ''}" style="--c:${evColor(ev)}">${esc(ev.title)}</div>`);
     let shown = lines.slice(0, lines.length > maxLines ? maxLines - 1 : maxLines);
     const extra = lines.length - shown.length;
-    const hd = S.settings.hebDate ? hebDate(k) : null;
-    const hdTxt = hd ? (hd.day === 1 ? hd.month : hd.short) : '';
-    html += `<div class="cell${other?' other':''}${d.getDay()===6?' sat':''}${k===tk?' today':''}${k===S.sel?' sel':''}" data-k="${k}">
-      <div class="num"><span class="d">${d.getDate()}</span><span class="hd">${esc(hdTxt)}</span></div>
+    html += `<div class="cell${other?' other':''}${k===tk?' today':''}${k===S.sel?' sel':''}" data-k="${k}">
+      <span class="d">${d.getDate()}</span>
       ${shown.join('')}${extra>0?`<div class="more">+${extra}</div>`:''}</div>`;
   }
   grid.innerHTML = html;
@@ -372,27 +353,17 @@ function evRow(ev){
   return `<div class="ev" data-id="${esc(ev.id)}" style="--c:${c}"><div class="tm">${tm}</div><div class="bar"></div>
     <div class="bd"><div class="t">${esc(ev.title)}</div>${sub?`<div class="s">${esc(sub)}</div>`:''}</div></div>`;
 }
-function holidayLines(k){
-  const h = S.holidays[k]; if (!h) return '';
-  let s = h.hol.map(t => `<div class="holi">${esc(t)}</div>`).join('');
-  if (h.parasha) s += `<div class="zman">שבת · ${esc(h.parasha)}${h.havdalah ? ' · צאת שבת ' + h.havdalah : ''}</div>`;
-  else if (h.havdalah) s += `<div class="zman">צאת שבת/חג ${h.havdalah}</div>`;
-  if (h.candles) s += `<div class="zman">הדלקת נרות ${h.candles}</div>`;
-  return s;
-}
 function renderDayPanel(){
   const k = S.sel, evs = eventsForDay(k);
-  const hd = hebDate(k);
-  $('dayPanel').innerHTML = `<div class="dp-head"><b>${esc(fmtLong(k))}</b><span>${esc(hd.full)}</span></div>
-    ${holidayLines(k)}${evs.map(evRow).join('') || (S.holidays[k] && S.holidays[k].hol.length ? '' : '<div class="empty">אין אירועים. לחיצה על + להוספה</div>')}`;
+  $('dayPanel').innerHTML = `<div class="dp-head">${esc(fmtLong(k))}</div>${evs.map(evRow).join('') || '<div class="empty">יום פנוי</div>'}`;
 }
 function renderDay(){
-  const k = S.sel, hd = hebDate(k);
-  $('dayHead').innerHTML = `<b>${esc(fmtLong(k))}</b><span>${esc(hd.full)}</span>`;
+  const k = S.sel;
+  $('dayHead').textContent = fmtLong(k);
   const evs = eventsForDay(k);
   const allDay = evs.filter(e => e.allDay || evStartMs(e) < dayStartMs(k) && evEndMs(e) >= dayEndMs(k));
   const timed = evs.filter(e => !allDay.includes(e));
-  $('allDay').innerHTML = holidayLines(k) + allDay.map(ev => `<div class="chip" data-id="${esc(ev.id)}" style="background:${evColor(ev)}">${esc(ev.title)}</div>`).join('');
+  $('allDay').innerHTML = allDay.map(ev => `<div class="chip allday" data-id="${esc(ev.id)}" style="--c:${evColor(ev)}">${esc(ev.title)}</div>`).join('');
   const HOUR = 56;
   let html = '';
   for (let h = 0; h < 24; h++) html += `<div class="hour" data-h="${h}" style="top:${h*HOUR}px"><span>${pad(h)}:00</span></div>`;
@@ -419,7 +390,7 @@ function renderDay(){
     const top = (it.s - base) / 3600000 * HOUR, height = Math.max(22, (it.e - it.s) / 3600000 * HOUR - 2);
     const w = 100 / it.ncol;
     const st = new Date(evStartMs(it.ev)), en = new Date(evEndMs(it.ev));
-    html += `<div class="tblock" data-id="${esc(it.ev.id)}" style="top:${top}px;height:${height}px;inset-inline-start:${it.col*w}%;width:${w}%;background:${evColor(it.ev)}">
+    html += `<div class="tblock" data-id="${esc(it.ev.id)}" style="top:${top}px;height:${height}px;inset-inline-start:${it.col*w}%;width:${w}%;--c:${evColor(it.ev)}">
       ${esc(it.ev.title)}<small>${hm(st)}–${hm(en)}${it.ev.location ? ' · ' + esc(it.ev.location) : ''}</small></div>`;
   });
   if (k === todayKey()){
@@ -437,26 +408,25 @@ function renderDay(){
 function renderList(){
   const start = todayKey(); let html = '';
   for (let i = 0; i < 90; i++){
-    const k = addDays(start, i), evs = eventsForDay(k), h = S.holidays[k];
-    if (!evs.length && !(h && h.hol.length)) continue;
-    const hd = hebDate(k);
-    html += `<div class="ag-day${i===0?' today':''}" data-k="${k}">${esc(i===0?'היום · ':i===1?'מחר · ':'')}${esc(fmtLong(k))}<span>${esc(hd.full)}</span></div>`;
-    if (h) html += h.hol.map(t => `<div class="holi">${esc(t)}</div>`).join('');
+    const k = addDays(start, i), evs = eventsForDay(k);
+    if (!evs.length) continue;
+    html += `<div class="ag-day${i===0?' today':''}" data-k="${k}">${esc(i===0?'היום · ':i===1?'מחר · ':'')}${esc(fmtLong(k))}</div>`;
     html += evs.map(evRow).join('');
   }
-  $('agenda').innerHTML = html || '<div class="empty">אין אירועים ב־90 הימים הקרובים</div>';
+  $('agenda').innerHTML = html || '<div class="empty">אין אירועים ב־90 הימים הקרובים. לחיצה על + להוספה</div>';
 }
 function renderBanner(){
   const b = $('banner');
   let msg = '', action = '', fn = null;
   if (!navigator.onLine){ msg = 'אין חיבור לאינטרנט. השינויים יישמרו ויסונכרנו אחר כך.'; }
-  else if (!clientId()){ if (!LS.get('bannerDismissed', false)){ msg = 'היומן עובד מקומית. כדי לסנכרן עם גוגל קלנדר צריך להגדיר Client ID.'; action = 'להגדרות'; fn = openSettings; } }
-  else if (!S.connected){ msg = 'חבר את גוגל קלנדר כדי לראות את האירועים שלך.'; action = 'התחברות'; fn = () => connect('consent'); }
+  else if (!clientId() || !S.connected){ if (!LS.get('bannerDismissed', false)){ msg = 'לחבר את גוגל קלנדר?'; action = 'חיבור'; fn = openGoogle; } }
   else if (!tokenValid()){ msg = 'החיבור לגוגל פג.' + (S.ops.length ? ` ${S.ops.length} שינויים ממתינים.` : ''); action = 'חיבור מחדש'; fn = () => connect(''); }
   if (!msg){ b.classList.add('hidden'); return; }
-  b.innerHTML = `<span>${esc(msg)}</span>${action ? `<button id="bannerBtn">${esc(action)}</button>` : ''}`;
+  const closable = action === 'חיבור';
+  b.innerHTML = `<span>${esc(msg)}</span><span>${action ? `<button id="bannerBtn">${esc(action)}</button>` : ''}${closable ? '<button id="bannerX" class="banner-x" aria-label="סגירה">✕</button>' : ''}</span>`;
   b.classList.remove('hidden');
   if (fn) $('bannerBtn').onclick = fn;
+  if (closable) $('bannerX').onclick = () => { LS.set('bannerDismissed', true); renderBanner(); };
 }
 let toastT;
 function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.add('hidden'), 2600); }
@@ -476,7 +446,7 @@ function maybeFetchForCursor(){
 function setView(v){ S.view = v; if (v === 'month') S.cursor = firstOfMonth(S.sel); render(); }
 
 /* ---------- editor ---------- */
-let editing = null, edColor = null;
+let editing = null, edCat = null;
 function openEditor(ev, presetKey, presetHour){
   editing = ev ? Object.assign({}, ev) : null;
   if (ev && ev.readOnly){ toast('יומן לקריאה בלבד'); return; }
@@ -501,15 +471,16 @@ function openEditor(ev, presetKey, presetHour){
   const rem = ev ? (ev.reminder == null ? S.settings.defaultReminder : ev.reminder) : S.settings.defaultReminder;
   const sel = $('edReminder'); sel.value = String(rem);
   if (sel.value !== String(rem)){ const o = document.createElement('option'); o.value = rem; o.textContent = rem + ' דק׳ לפני'; sel.appendChild(o); sel.value = String(rem); }
-  edColor = ev ? ev.colorId : null;
-  renderColors();
+  edCat = ev ? (ev.cat || null) : null;
+  renderEdCats();
   toggleTimes();
   $('editorBackdrop').classList.remove('hidden');
   if (!ev) setTimeout(() => $('edTitle').focus(), 250);
 }
-function renderColors(){
-  const opts = [[null, 'ברירת מחדל']].concat(Object.keys(GCOLORS).map(k => [k, '']));
-  $('edColors').innerHTML = opts.map(([id]) => `<button type="button" data-c="${id||''}" class="${String(edColor||'')===String(id||'')?'on':''}" style="background:${id?GCOLORS[id]:(S.calendars.find(c=>c.primary)||{}).color||LOCAL_COLOR}"></button>`).join('');
+function renderEdCats(){
+  const auto = categoryOf($('edTitle').value);
+  const cur = edCat ? S.cats.find(c => c.id === edCat) : auto;
+  $('edCats').innerHTML = S.cats.map(c => `<button type="button" data-cat="${c.id}" style="--c:${c.color}" class="${cur && cur.id === c.id ? 'on' + (!edCat ? ' auto' : '') : ''}">${esc(c.name)}</button>`).join('');
 }
 function toggleTimes(){ $('edTimes').classList.toggle('hidden', $('edAllDay').checked); }
 function closeEditor(){ $('editorBackdrop').classList.add('hidden'); document.activeElement && document.activeElement.blur(); }
@@ -520,7 +491,7 @@ function saveEditor(e){
   let endDate = $('edEndDate').value || date; if (endDate < date) endDate = date;
   const ev = editing || { id: 'local-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6), calId: S.connected ? primaryCalId() : 'local' };
   ev.title = title; ev.allDay = allDay; ev.location = $('edLocation').value.trim(); ev.notes = $('edNotes').value;
-  ev.reminder = Number($('edReminder').value); ev.colorId = edColor || null;
+  ev.reminder = Number($('edReminder').value); ev.cat = edCat || null;
   if (allDay){ ev.start = date; ev.end = addDays(endDate, 1); }
   else {
     const s = new Date(date + 'T' + ($('edStart').value || '09:00'));
@@ -601,8 +572,8 @@ function openSettings(){
   $('stClientId').value = clientId();
   $('stDefaultReminder').value = String(S.settings.defaultReminder);
   $('stEmailReminder').checked = !!S.settings.emailReminder;
-  $('stHebDate').checked = !!S.settings.hebDate;
-  $('stCity').value = S.settings.city;
+  $('stGColor').checked = !!S.settings.gColor;
+  renderCatList();
   $('stVersion').textContent = VERSION;
   renderGoogleSettings(); updateNotifStatus();
   $('settingsBackdrop').classList.remove('hidden');
@@ -611,18 +582,24 @@ function renderGoogleSettings(){
   const has = !!clientId();
   const ok = S.connected && tokenValid();
   const last = LS.get('lastSync', 0);
-  $('stGoogleStatus').textContent = !has ? 'צריך להזין Client ID (למטה) לפני החיבור.' :
+  $('stGoogleStatus').textContent = !has ? 'עוד לא הוגדר' :
     ok ? ('מחובר' + (last ? ' · סנכרון אחרון ' + hm(new Date(last)) : '')) : (S.connected ? 'החיבור פג. לחץ על התחברות.' : 'לא מחובר');
   $('stConnect').classList.toggle('hidden', ok);
-  $('stConnect').disabled = !has;
-  if (!has) document.querySelector('#settingsBackdrop details').open = true;
+  $('gSetup').classList.toggle('hidden', has && S.connected);
+  $('stConnect').textContent = S.connected ? 'חיבור מחדש' : 'התחברות לגוגל';
   $('stSyncNow').classList.toggle('hidden', !ok);
   $('stDisconnect').classList.toggle('hidden', !S.connected);
   $('stCalendars').innerHTML = S.connected && S.calendars.length ? '<p class="muted small">יומנים להצגה:</p>' + S.calendars.map(c =>
     `<label><input type="checkbox" data-cal="${esc(c.id)}" ${c.selected!==false?'checked':''}><i style="background:${c.color}"></i>${esc(c.summary)}${c.primary?' (ראשי)':''}</label>`).join('') : '';
 }
+function openGoogle(){ openSettings(); setTimeout(() => $('googleCard').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100); }
 async function connect(prompt){
-  if (!clientId()){ openSettings(); toast('צריך להזין Client ID קודם'); return; }
+  const typed = $('stClientId').value.trim();
+  if (typed && typed !== clientId()){
+    if (!/\.apps\.googleusercontent\.com$/.test(typed)){ toast('המפתח צריך להיגמר ב-apps.googleusercontent.com'); return; }
+    LS.set('clientId', typed); tokenClient = null;
+  }
+  if (!clientId()){ openGoogle(); toast('קודם מדביקים את ה-Client ID'); $('stClientId').focus(); return; }
   try {
     await requestToken(S.connected ? prompt : 'consent');
     toast('מחובר לגוגל קלנדר');
@@ -643,6 +620,36 @@ function disconnect(){
   S.ops = S.ops.filter(o => String(o.id).startsWith('local-')); saveOps();
   S.calendars = []; LS.set('calendars', []); saveEvents();
   renderGoogleSettings(); render();
+}
+
+function renderCatList(){
+  $('catList').innerHTML = S.cats.map(c => `<div class="cat" data-id="${c.id}">
+    <div class="cat-top"><input type="color" value="${c.color}" aria-label="צבע"><input class="name" value="${esc(c.name)}"><button type="button" class="del" aria-label="מחיקה">מחיקה</button></div>
+    <textarea rows="3" placeholder="מילים, מופרדות בפסיק">${esc(c.kw)}</textarea></div>`).join('');
+}
+
+/* ---------- install guide ---------- */
+let deferredPrompt = null;
+const isStandalone = () => window.navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isMobile = () => isIOS() || /android/i.test(navigator.userAgent);
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; maybeShowInstall(); });
+function showInstall(force){
+  const android = !isIOS() && !!deferredPrompt;
+  $('installSteps').classList.toggle('hidden', android);
+  $('installHint').classList.toggle('hidden', android);
+  $('installArrow').classList.toggle('hidden', android);
+  $('installBtn').classList.toggle('hidden', !android);
+  $('install').classList.remove('hidden');
+}
+function hideInstall(){ $('install').classList.add('hidden'); }
+function maybeShowInstall(){
+  const force = new URLSearchParams(location.search).get('install') === '1';
+  if (force) return showInstall(true);
+  if (isStandalone() || !isMobile()) return;
+  const d = LS.get('installDismissed', 0);
+  if (d && Date.now() - d < 3*86400000) return;
+  if (isIOS() || deferredPrompt) showInstall();
 }
 
 /* ---------- wiring ---------- */
@@ -693,7 +700,8 @@ function bind(){
     const [h, m] = $('edStart').value.split(':').map(Number);
     if ($('edDate').value === $('edEndDate').value && $('edEnd').value <= $('edStart').value){ $('edEnd').value = pad(Math.min(h+1,23)) + ':' + pad(m); }
   };
-  $('edColors').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; edColor = b.dataset.c || null; renderColors(); });
+  $('edCats').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const auto = categoryOf($('edTitle').value); edCat = (edCat === b.dataset.cat || (!edCat && auto && auto.id === b.dataset.cat)) ? null : b.dataset.cat; renderEdCats(); });
+  $('edTitle').addEventListener('input', renderEdCats);
   $('editorBackdrop').addEventListener('click', e => { if (e.target.id === 'editorBackdrop') closeEditor(); });
 
   $('stClose').onclick = () => $('settingsBackdrop').classList.add('hidden');
@@ -701,15 +709,31 @@ function bind(){
   $('stConnect').onclick = () => connect('consent');
   $('stSyncNow').onclick = async () => { fetchedMonths.clear(); await sync({ calendars: true }); renderGoogleSettings(); toast('סונכרן'); };
   $('stDisconnect').onclick = () => { if (confirm('לנתק את גוגל קלנדר מהטלפון הזה?')) disconnect(); };
-  $('stSaveClientId').onclick = () => { const v = $('stClientId').value.trim(); LS.set('clientId', v); tokenClient = null; renderGoogleSettings(); renderBanner(); toast(v ? 'נשמר' : 'נמחק'); };
+  $('copyOrigin').onclick = async () => { try { await navigator.clipboard.writeText('https://token-byte.github.io'); toast('הועתק'); } catch(e){ toast('https://token-byte.github.io'); } };
+  $('stGColor').onchange = e => { S.settings.gColor = e.target.checked; saveSettings(); };
+  $('catReset').onclick = () => { if (confirm('לחזור לקטגוריות ברירת המחדל?')){ S.cats = defaultCats(); saveCats(); renderCatList(); render(); } };
+  $('catAdd').onclick = () => { S.cats.push({ id: 'c' + Date.now().toString(36), name: 'קטגוריה חדשה', color: '#5ac8fa', kw: '' }); saveCats(); renderCatList(); };
+  $('catList').addEventListener('input', e => {
+    const row = e.target.closest('.cat'); if (!row) return; const c = S.cats.find(c => c.id === row.dataset.id); if (!c) return;
+    if (e.target.type === 'color'){ c.color = e.target.value; c.g = nearestGColor(c.color); }
+    else if (e.target.classList.contains('name')) c.name = e.target.value;
+    else if (e.target.tagName === 'TEXTAREA') c.kw = e.target.value;
+    saveCats(); render();
+  });
+  $('catList').addEventListener('click', e => {
+    const b = e.target.closest('.del'); if (!b) return; const id = b.closest('.cat').dataset.id;
+    S.cats = S.cats.filter(c => c.id !== id); saveCats(); renderCatList(); render();
+  });
+  $('stShowInstall').onclick = () => { $('settingsBackdrop').classList.add('hidden'); showInstall(true); };
+  $('installClose').onclick = () => { LS.set('installDismissed', Date.now()); hideInstall(); };
+  $('install').addEventListener('click', e => { if (e.target.id === 'install') { LS.set('installDismissed', Date.now()); hideInstall(); } });
+  $('installBtn').onclick = async () => { if (deferredPrompt){ deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; hideInstall(); } };
   $('stCalendars').addEventListener('change', e => {
     const id = e.target.dataset.cal; const c = S.calendars.find(c => c.id === id); if (!c) return;
     c.selected = e.target.checked; LS.set('calendars', S.calendars); render(); if (c.selected){ fetchedMonths.clear(); sync(); }
   });
   $('stDefaultReminder').onchange = e => { S.settings.defaultReminder = Number(e.target.value); saveSettings(); scheduleNotifications(); };
   $('stEmailReminder').onchange = e => { S.settings.emailReminder = e.target.checked; saveSettings(); };
-  $('stHebDate').onchange = e => { S.settings.hebDate = e.target.checked; saveSettings(); render(); };
-  $('stCity').onchange = e => { S.settings.city = e.target.value; saveSettings(); S.holidays = {}; loadedYears.clear(); render(); };
   $('stNotif').onclick = enableNotifications;
   $('stTestNotif').onclick = async () => {
     if (!('Notification' in window) || Notification.permission !== 'granted'){ await enableNotifications(); if (!('Notification' in window) || Notification.permission !== 'granted') return; }
@@ -735,6 +759,7 @@ if ('serviceWorker' in navigator){
   navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.k){ S.sel = e.data.k; setView('day'); } });
 }
 bind();
+maybeShowInstall();
 // deep link ?d=YYYY-MM-DD&view=day
 (() => { const p = new URLSearchParams(location.search); const d = p.get('d'); if (d && /^\d{4}-\d\d-\d\d$/.test(d)){ S.sel = d; S.cursor = firstOfMonth(d); } const v = p.get('view'); if (['month','day','list'].includes(v)) S.view = v; })();
 render();

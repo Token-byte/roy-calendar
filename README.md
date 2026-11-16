@@ -1,8 +1,9 @@
-# היומן של רוי
+# יומן של רוי
 
-יומן PWA אישי בעברית: תצוגת חודש גדולה, יום ורשימה, חגים ושבתות (Hebcal), תאריך עברי, סנכרון דו-כיווני עם Google Calendar ותזכורות.
+יומן PWA אישי בעברית, מינימליסטי: תצוגת חודש (ראשון עד שבת), יום ורשימה, צבע אוטומטי לפי סוג האירוע, סנכרון דו-כיווני עם Google Calendar ותזכורות.
 
 - סטטי לגמרי, בלי שרת. נפרס ב-GitHub Pages.
-- `config.js`: אפשר להדביק `GOOGLE_CLIENT_ID`, או להזין אותו במסך ההגדרות באפליקציה (נשמר בטלפון).
+- קטגוריות וצבעים: לפי מילות מפתח בכותרת, ניתנות לעריכה בהגדרות. נשמרות בטלפון.
+- `config.js`: אפשר להדביק `GOOGLE_CLIENT_ID` כדי לדלג על ההדבקה באפליקציה.
 - Google OAuth: Web application client, Authorized JavaScript origin = `https://token-byte.github.io`.
 - הרשאות: `calendar.events`, `calendar.calendarlist.readonly`.

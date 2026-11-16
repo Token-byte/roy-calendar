@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>היומן של רוי</title>
+<title>יומן</title>
 <meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -18,13 +18,13 @@
 <body>
 <div id="app">
   <header class="top">
-    <button class="icon-btn" id="btnSettings" aria-label="הגדרות">⚙︎</button>
-    <div class="title-wrap">
+    <h1 id="title">—</h1>
+    <div class="top-actions">
       <button class="nav-btn" id="btnPrev" aria-label="הקודם">›</button>
-      <h1 id="title">—</h1>
+      <button class="today-btn" id="btnToday">היום</button>
       <button class="nav-btn" id="btnNext" aria-label="הבא">‹</button>
+      <button class="icon-btn" id="btnSettings" aria-label="הגדרות"><svg viewBox="0 0 24 24" width="20" height="20"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
     </div>
-    <button class="today-btn" id="btnToday">היום</button>
   </header>
   <div id="banner" class="banner hidden"></div>
 
@@ -52,6 +52,25 @@
   <button class="fab" id="fab" aria-label="אירוע חדש">+</button>
 </div>
 
+<!-- Install guide (iPhone Safari) -->
+<div class="install hidden" id="install">
+  <div class="install-card">
+    <button class="install-x" id="installClose" aria-label="סגירה">✕</button>
+    <img src="icons/icon-192.png" alt="" class="install-icon">
+    <b>מתקינים את היומן במסך הבית</b>
+    <p class="muted small">ככה הוא נפתח כמו אפליקציה ושולח התראות.</p>
+    <ol class="steps" id="installSteps">
+      <li><span class="n">1</span><span>לוחצים על <b>שיתוף</b> בסרגל של Safari</span>
+        <svg class="ico" viewBox="0 0 24 24"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10H6a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></li>
+      <li><span class="n">2</span><span>בוחרים <b>הוספה למסך הבית</b></span>
+        <svg class="ico" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></li>
+    </ol>
+    <p class="muted small" id="installHint">לא רואים שיתוף? לוחצים על ••• בסרגל ואז שיתוף.</p>
+    <button class="primary hidden" id="installBtn">התקנה</button>
+  </div>
+  <div class="install-arrow" id="installArrow">↓</div>
+</div>
+
 <!-- Event editor -->
 <div class="sheet-backdrop hidden" id="editorBackdrop">
   <form class="sheet" id="editor" autocomplete="off">
@@ -61,13 +80,13 @@
       <button type="submit" class="link strong">שמירה</button>
     </div>
     <input id="edTitle" class="big-input" placeholder="מה קורה?" required>
+    <div class="cats" id="edCats"></div>
     <label class="row"><span>כל היום</span><input type="checkbox" id="edAllDay" class="switch"></label>
     <label class="row"><span>תאריך</span><input type="date" id="edDate" required></label>
     <div class="row time-row" id="edTimes">
       <label><span>מ־</span><input type="time" id="edStart" step="300"></label>
       <label><span>עד</span><input type="time" id="edEnd" step="300"></label>
     </div>
-    <label class="row"><span>תאריך סיום</span><input type="date" id="edEndDate"></label>
     <label class="row"><span>תזכורת</span>
       <select id="edReminder">
         <option value="-1">בלי</option>
@@ -81,10 +100,13 @@
         <option value="1440">יום לפני</option>
       </select>
     </label>
-    <label class="row"><span>צבע</span><div class="colors" id="edColors"></div></label>
-    <input id="edLocation" class="input" placeholder="מיקום">
-    <textarea id="edNotes" class="input" rows="3" placeholder="הערות"></textarea>
-    <button type="button" class="danger hidden" id="edDelete">מחיקת אירוע</button>
+    <details class="more-details">
+      <summary>עוד פרטים</summary>
+      <label class="row"><span>תאריך סיום</span><input type="date" id="edEndDate"></label>
+      <input id="edLocation" class="input" placeholder="מיקום">
+      <textarea id="edNotes" class="input" rows="3" placeholder="הערות"></textarea>
+    </details>
+    <button type="button" class="danger hidden" id="edDelete">מחיקה</button>
   </form>
 </div>
 
@@ -95,50 +117,54 @@
       <span></span><strong>הגדרות</strong>
       <button type="button" class="link strong" id="stClose">סגירה</button>
     </div>
-    <h3>Google Calendar</h3>
-    <p class="muted" id="stGoogleStatus">לא מחובר</p>
-    <button class="primary" id="stConnect">התחברות לגוגל</button>
-    <button class="secondary hidden" id="stSyncNow">סנכרון עכשיו</button>
-    <button class="secondary hidden" id="stDisconnect">ניתוק</button>
-    <div id="stCalendars" class="cal-list"></div>
-    <details>
-      <summary>Client ID של גוגל</summary>
-      <p class="muted small">מדביקים כאן את ה־OAuth Client ID שיצרת ב־Google Cloud. נשמר רק בטלפון הזה.</p>
-      <input id="stClientId" class="input ltr" placeholder="xxxx.apps.googleusercontent.com">
-      <button class="secondary" id="stSaveClientId">שמירה</button>
-    </details>
 
-    <h3>התראות</h3>
-    <label class="row"><span>תזכורת ברירת מחדל</span>
-      <select id="stDefaultReminder">
-        <option value="-1">בלי</option>
-        <option value="0">בזמן האירוע</option>
-        <option value="5">5 דק׳ לפני</option>
-        <option value="10">10 דק׳ לפני</option>
-        <option value="15">15 דק׳ לפני</option>
-        <option value="30">30 דק׳ לפני</option>
-        <option value="60">שעה לפני</option>
-        <option value="1440">יום לפני</option>
-      </select>
-    </label>
-    <label class="row"><span>גם מייל תזכורת מגוגל</span><input type="checkbox" id="stEmailReminder" class="switch"></label>
-    <button class="secondary" id="stNotif">הפעלת התראות בטלפון</button>
-    <button class="secondary" id="stTestNotif">שליחת התראת בדיקה</button>
-    <p class="muted small" id="stNotifStatus"></p>
+    <div class="card" id="googleCard">
+      <div class="card-head"><b>גוגל קלנדר</b><span class="muted small" id="stGoogleStatus">לא מחובר</span></div>
+      <div id="gSetup">
+        <p class="small">גוגל דורשת מפתח חיבור אישי (Client ID). עושים את זה פעם אחת, בערך 5 דקות, מהמחשב או מהטלפון:</p>
+        <ol class="gsteps small">
+          <li><a href="https://console.cloud.google.com/flows/enableapi?apiid=calendar-json.googleapis.com" target="_blank" rel="noopener">פותחים את הקישור הזה</a> עם roifridman24@gmail.com, יוצרים פרויקט ומאשרים Enable.</li>
+          <li><a href="https://console.cloud.google.com/auth/overview" target="_blank" rel="noopener">מסך ההסכמה</a>: Get started, שם "יומן", External, המייל שלך. אחר כך ב-<a href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noopener">Audience</a> מוסיפים את עצמך כ-Test user.</li>
+          <li><a href="https://console.cloud.google.com/auth/clients/create" target="_blank" rel="noopener">יוצרים Client</a>: Web application. ב-Authorized JavaScript origins מדביקים:
+            <button type="button" class="copy" id="copyOrigin"><code>https://token-byte.github.io</code> העתקה</button></li>
+          <li>מעתיקים את ה-Client ID ומדביקים כאן:</li>
+        </ol>
+        <input id="stClientId" class="input ltr" placeholder="....apps.googleusercontent.com" inputmode="url">
+      </div>
+      <button class="primary" id="stConnect">התחברות לגוגל</button>
+      <button class="secondary hidden" id="stSyncNow">סנכרון עכשיו</button>
+      <div id="stCalendars" class="cal-list"></div>
+      <button class="link small hidden" id="stDisconnect">ניתוק</button>
+    </div>
 
-    <h3>לוח עברי</h3>
-    <label class="row"><span>תאריך עברי קטן</span><input type="checkbox" id="stHebDate" class="switch"></label>
-    <label class="row"><span>זמני שבת לפי</span>
-      <select id="stCity">
-        <option value="293397">תל אביב</option>
-        <option value="281184">ירושלים</option>
-        <option value="294801">חיפה</option>
-        <option value="295530">באר שבע</option>
-        <option value="293788">רמת גן</option>
-        <option value="294778">הרצליה</option><option value="294071">נתניה</option>
-        <option value="293703">ראשון לציון</option><option value="295629">אשדוד</option>
-      </select>
-    </label>
+    <div class="card">
+      <div class="card-head"><b>צבעים לפי סוג</b><button class="link small" id="catReset">איפוס</button></div>
+      <p class="muted small">הצבע נקבע אוטומטית לפי מילים בשם האירוע. הראשונה שמתאימה קובעת.</p>
+      <div id="catList"></div>
+      <button class="secondary" id="catAdd">+ קטגוריה</button>
+      <label class="row"><span>לצבוע גם בגוגל קלנדר</span><input type="checkbox" id="stGColor" class="switch"></label>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><b>התראות</b></div>
+      <label class="row"><span>תזכורת ברירת מחדל</span>
+        <select id="stDefaultReminder">
+          <option value="-1">בלי</option>
+          <option value="0">בזמן האירוע</option>
+          <option value="5">5 דק׳ לפני</option>
+          <option value="10">10 דק׳ לפני</option>
+          <option value="15">15 דק׳ לפני</option>
+          <option value="30">30 דק׳ לפני</option>
+          <option value="60">שעה לפני</option>
+          <option value="1440">יום לפני</option>
+        </select>
+      </label>
+      <label class="row"><span>גם מייל תזכורת מגוגל</span><input type="checkbox" id="stEmailReminder" class="switch"></label>
+      <button class="secondary" id="stNotif">הפעלת התראות</button>
+      <button class="secondary" id="stTestNotif">התראת בדיקה</button>
+      <p class="muted small" id="stNotifStatus"></p>
+    </div>
+    <button class="link small" id="stShowInstall">איך מתקינים באייפון</button>
     <p class="muted small">גרסה <span id="stVersion"></span></p>
   </div>
 </div>
