@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>היומן של רוי</title>
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="יומן">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+<script src="config.js"></script>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <button class="icon-btn" id="btnSettings" aria-label="הגדרות">⚙︎</button>
+    <div class="title-wrap">
+      <button class="nav-btn" id="btnPrev" aria-label="הקודם">›</button>
+      <h1 id="title">—</h1>
+      <button class="nav-btn" id="btnNext" aria-label="הבא">‹</button>
+    </div>
+    <button class="today-btn" id="btnToday">היום</button>
+  </header>
+  <div id="banner" class="banner hidden"></div>
+
+  <main id="views">
+    <section id="monthView" class="view">
+      <div class="weekdays" id="weekdays"></div>
+      <div class="grid" id="grid"></div>
+      <div class="day-panel" id="dayPanel"></div>
+    </section>
+    <section id="dayView" class="view hidden">
+      <div class="day-head" id="dayHead"></div>
+      <div class="allday" id="allDay"></div>
+      <div class="timeline-wrap" id="timelineWrap"><div class="timeline" id="timeline"></div></div>
+    </section>
+    <section id="listView" class="view hidden">
+      <div class="agenda" id="agenda"></div>
+    </section>
+  </main>
+
+  <nav class="tabs">
+    <button data-view="month" class="active">חודש</button>
+    <button data-view="day">יום</button>
+    <button data-view="list">רשימה</button>
+  </nav>
+  <button class="fab" id="fab" aria-label="אירוע חדש">+</button>
+</div>
+
+<!-- Event editor -->
+<div class="sheet-backdrop hidden" id="editorBackdrop">
+  <form class="sheet" id="editor" autocomplete="off">
+    <div class="sheet-head">
+      <button type="button" class="link" id="edCancel">ביטול</button>
+      <strong id="edTitleLbl">אירוע חדש</strong>
+      <button type="submit" class="link strong">שמירה</button>
+    </div>
+    <input id="edTitle" class="big-input" placeholder="מה קורה?" required>
+    <label class="row"><span>כל היום</span><input type="checkbox" id="edAllDay" class="switch"></label>
+    <label class="row"><span>תאריך</span><input type="date" id="edDate" required></label>
+    <div class="row time-row" id="edTimes">
+      <label><span>מ־</span><input type="time" id="edStart" step="300"></label>
+      <label><span>עד</span><input type="time" id="edEnd" step="300"></label>
+    </div>
+    <label class="row"><span>תאריך סיום</span><input type="date" id="edEndDate"></label>
+    <label class="row"><span>תזכורת</span>
+      <select id="edReminder">
+        <option value="-1">בלי</option>
+        <option value="0">בזמן האירוע</option>
+        <option value="5">5 דק׳ לפני</option>
+        <option value="10">10 דק׳ לפני</option>
+        <option value="15">15 דק׳ לפני</option>
+        <option value="30">30 דק׳ לפני</option>
+        <option value="60">שעה לפני</option>
+        <option value="120">שעתיים לפני</option>
+        <option value="1440">יום לפני</option>
+      </select>
+    </label>
+    <label class="row"><span>צבע</span><div class="colors" id="edColors"></div></label>
+    <input id="edLocation" class="input" placeholder="מיקום">
+    <textarea id="edNotes" class="input" rows="3" placeholder="הערות"></textarea>
+    <button type="button" class="danger hidden" id="edDelete">מחיקת אירוע</button>
+  </form>
+</div>
+
+<!-- Settings -->
+<div class="sheet-backdrop hidden" id="settingsBackdrop">
+  <div class="sheet">
+    <div class="sheet-head">
+      <span></span><strong>הגדרות</strong>
+      <button type="button" class="link strong" id="stClose">סגירה</button>
+    </div>
+    <h3>Google Calendar</h3>
+    <p class="muted" id="stGoogleStatus">לא מחובר</p>
+    <button class="primary" id="stConnect">התחברות לגוגל</button>
+    <button class="secondary hidden" id="stSyncNow">סנכרון עכשיו</button>
+    <button class="secondary hidden" id="stDisconnect">ניתוק</button>
+    <div id="stCalendars" class="cal-list"></div>
+    <details>
+      <summary>Client ID של גוגל</summary>
+      <p class="muted small">מדביקים כאן את ה־OAuth Client ID שיצרת ב־Google Cloud. נשמר רק בטלפון הזה.</p>
+      <input id="stClientId" class="input ltr" placeholder="xxxx.apps.googleusercontent.com">
+      <button class="secondary" id="stSaveClientId">שמירה</button>
+    </details>
+
+    <h3>התראות</h3>
+    <label class="row"><span>תזכורת ברירת מחדל</span>
+      <select id="stDefaultReminder">
+        <option value="-1">בלי</option>
+        <option value="0">בזמן האירוע</option>
+        <option value="5">5 דק׳ לפני</option>
+        <option value="10">10 דק׳ לפני</option>
+        <option value="15">15 דק׳ לפני</option>
+        <option value="30">30 דק׳ לפני</option>
+        <option value="60">שעה לפני</option>
+        <option value="1440">יום לפני</option>
+      </select>
+    </label>
+    <label class="row"><span>גם מייל תזכורת מגוגל</span><input type="checkbox" id="stEmailReminder" class="switch"></label>
+    <button class="secondary" id="stNotif">הפעלת התראות בטלפון</button>
+    <button class="secondary" id="stTestNotif">שליחת התראת בדיקה</button>
+    <p class="muted small" id="stNotifStatus"></p>
+
+    <h3>לוח עברי</h3>
+    <label class="row"><span>תאריך עברי קטן</span><input type="checkbox" id="stHebDate" class="switch"></label>
+    <label class="row"><span>זמני שבת לפי</span>
+      <select id="stCity">
+        <option value="293397">תל אביב</option>
+        <option value="281184">ירושלים</option>
+        <option value="294801">חיפה</option>
+        <option value="295530">באר שבע</option>
+        <option value="293788">רמת גן</option>
+        <option value="294778">הרצליה</option><option value="294071">נתניה</option>
+        <option value="293703">ראשון לציון</option><option value="295629">אשדוד</option>
+      </select>
+    </label>
+    <p class="muted small">גרסה <span id="stVersion"></span></p>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
