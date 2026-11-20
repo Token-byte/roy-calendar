@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
 <div class="app">
@@ -108,6 +108,7 @@
 
   <div class="dock">
     <p class="status" id="status" role="status"></p>
+    <button type="button" class="retry" id="retryBtn" hidden>נסו שוב</button>
     <button type="button" class="spin" id="spinBtn">סובבו את הגלגל</button>
   </div>
 
@@ -138,6 +139,7 @@
 <noscript>
   <p class="noscript">כדי לסובב את הרולטה צריך להפעיל JavaScript.</p>
 </noscript>
-<script src="app.js"></script>
+<script src="fallback-places.js?v=2"></script>
+<script src="app.js?v=2"></script>
 </body>
 </html>
