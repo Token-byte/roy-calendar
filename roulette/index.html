@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="he" dir="rtl" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>רולטת יציאות</title>
+<meta name="description" content="לא מצליחים להחליט לאן יוצאים? הגלגל בוחר מקום אמיתי בסביבה.">
+<meta name="theme-color" content="#f4f0e8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="רולטה">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <p class="eyebrow">להערב</p>
+      <h1>רולטת יציאות</h1>
+    </div>
+    <button type="button" class="icon-btn" id="favBtn" aria-label="שמורים ללב">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+        <path d="M12 20s-7-4.4-7-9.1C5 8 6.8 6.2 9.1 6.2c1.3 0 2.4.6 2.9 1.6.5-1 1.6-1.6 2.9-1.6C17.2 6.2 19 8 19 10.9 19 15.6 12 20 12 20z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+      </svg>
+      <span class="badge" id="favCount" hidden>0</span>
+    </button>
+  </header>
+  <p class="lede">לא מצליחים להחליט לאן יוצאים? לחיצה אחת, והגלגל בוחר מקום אמיתי בסביבה.</p>
+
+  <section class="card" aria-label="מיקום ומרחק">
+    <div class="loc-row">
+      <button type="button" class="ghost" id="geoBtn">המיקום שלי</button>
+      <label class="city-label">
+        <span class="sr">עיר</span>
+        <select id="city"></select>
+      </label>
+    </div>
+    <p class="loc" id="locLabel">הוד השרון · נקודת התחלה</p>
+    <div class="radius-head">
+      <span>רדיוס</span>
+      <strong id="radiusLabel">5 ק״מ</strong>
+    </div>
+    <input id="radius" type="range" min="1" max="30" value="5" step="1" aria-label="רדיוס החיפוש בקילומטרים">
+    <div class="range-ends"><span>1 ק״מ</span><span>30 ק״מ</span></div>
+  </section>
+
+  <section class="block" aria-label="קטגוריות">
+    <h2>מה בא לכם</h2>
+    <div class="chips" id="cats"></div>
+  </section>
+
+  <details class="card more" id="more">
+    <summary>עוד אפשרויות</summary>
+    <div class="field">
+      <span class="field-label">כמה אנשים</span>
+      <div class="stepper">
+        <button type="button" id="peopleMinus" aria-label="פחות אנשים">−</button>
+        <strong id="peopleVal">לא משנה</strong>
+        <button type="button" id="peoplePlus" aria-label="יותר אנשים">+</button>
+      </div>
+    </div>
+    <div class="field">
+      <span class="field-label">תקציב</span>
+      <div class="seg" id="budget" role="group" aria-label="תקציב">
+        <button type="button" data-value="any" aria-pressed="true">לא משנה</button>
+        <button type="button" data-value="cheap" aria-pressed="false">זול או חינם</button>
+        <button type="button" data-value="mid" aria-pressed="false">בינוני</button>
+        <button type="button" data-value="high" aria-pressed="false">מתפנקים</button>
+      </div>
+    </div>
+    <div class="field">
+      <span class="field-label">איפה</span>
+      <div class="seg" id="setting" role="group" aria-label="בפנים או בחוץ">
+        <button type="button" data-value="any" aria-pressed="true">לא משנה</button>
+        <button type="button" data-value="in" aria-pressed="false">בפנים</button>
+        <button type="button" data-value="out" aria-pressed="false">בחוץ</button>
+      </div>
+    </div>
+  </details>
+
+  <section class="card home-box" id="homeBox">
+    <label class="switch">
+      <input type="checkbox" id="homeToggle">
+      <span>לערבב גם רעיונות לבית</span>
+    </label>
+  </section>
+
+  <div class="stage">
+    <div class="wheel-wrap">
+      <svg class="pointer" viewBox="0 0 28 32" aria-hidden="true">
+        <path d="M14 31 L2.2 7.2 Q14 13 25.8 7.2 Z" fill="#1a1714"/>
+      </svg>
+      <canvas id="wheel" width="720" height="720" role="img" aria-label="גלגל הרולטה"></canvas>
+      <div class="hub">
+        <span id="hubKicker">הערב</span>
+        <strong id="hubName">סובבו</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="dock">
+    <p class="status" id="status" role="status"></p>
+    <button type="button" class="spin" id="spinBtn">סובבו את הגלגל</button>
+  </div>
+
+  <section class="card" id="ideaCard">
+    <p class="hint">ערב פוקר, על האש, משחקי קופסה ועוד. הרעיונות שלכם נשמרים בטלפון ונכנסים לגלגל כשהמתג דלוק.</p>
+    <div class="ideas" id="ideaList"></div>
+    <form class="add-idea" id="ideaForm">
+      <input id="ideaInput" type="text" maxlength="60" placeholder="רעיון משלכם" enterkeyhint="done" autocomplete="off">
+      <button type="submit">הוספה</button>
+    </form>
+  </section>
+
+  <footer class="colophon">
+    מקומות אמיתיים מ-<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>.
+    שעות הפתיחה לא תמיד מעודכנות.
+  </footer>
+
+  <p class="install-hint" id="installHint" hidden>
+    באייפון: שיתוף, ואז «הוספה למסך הבית».
+    <button type="button" id="installDismiss">הבנתי</button>
+  </p>
+</div>
+
+<div class="backdrop" id="backdrop" hidden></div>
+<section class="sheet" id="resultSheet" hidden aria-labelledby="resultKicker"></section>
+<section class="sheet" id="favSheet" hidden aria-labelledby="favTitle"></section>
+
+<noscript>
+  <p class="noscript">כדי לסובב את הרולטה צריך להפעיל JavaScript.</p>
+</noscript>
+<script src="app.js"></script>
+</body>
+</html>
