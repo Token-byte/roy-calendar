@@ -339,6 +339,16 @@ input[type="range"] {
   font-size: 14px;
 }
 .status.error { color: #8a3144; }
+.retry {
+  width: 100%;
+  min-height: 46px;
+  margin: 0 0 8px;
+  border: 1.5px solid var(--ink);
+  background: #fff;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 700;
+}
 .spin {
   width: 100%;
   min-height: 56px;

@@ -1,10 +1,11 @@
 'use strict';
 
 const HOD = { id: 'hod-hasharon', name: 'הוד השרון', lat: 32.15, lon: 34.89 };
-const FRESH_MS = 15 * 60 * 1000;
-const STALE_MS = 6 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const FETCH_MS = 6000;
 const ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
   'https://overpass.private.coffee/api/interpreter',
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
 ];
@@ -249,20 +250,19 @@ function buildQuery(cats) {
   const lat = state.lat.toFixed(5);
   const lon = state.lon.toFixed(5);
   const meters = Math.round(state.radius * 1000);
-  const lines = ['[out:json][timeout:25];'];
+  const grouped = new Map();
   cats.forEach(cat => {
-    const grouped = new Map();
     cat.filters.forEach(([key, value]) => {
       if (!grouped.has(key)) grouped.set(key, []);
-      grouped.get(key).push(value);
+      if (!grouped.get(key).includes(value)) grouped.get(key).push(value);
     });
-    lines.push('(');
-    grouped.forEach((values, key) => {
-      lines.push('  nwr["' + key + '"~"^(' + values.join('|') + ')$"](around:' + meters + ',' + lat + ',' + lon + ');');
-    });
-    lines.push(');');
-    lines.push('out center tags ' + cat.limit + ';');
   });
+  const lines = ['[out:json][timeout:8];', '('];
+  grouped.forEach((values, key) => {
+    const type = (key === 'amenity' || key === 'sport') ? 'node' : 'nwr';
+    lines.push('  ' + type + '["' + key + '"~"^(' + values.join('|') + ')$"](around:' + meters + ',' + lat + ',' + lon + ');');
+  });
+  lines.push(');', 'out center 36;');
   return lines.join('\n');
 }
 function parseElements(elements, cats) {
@@ -299,28 +299,85 @@ function parseElements(elements, cats) {
   return dedupe(places);
 }
 
-function cacheKey(cats) {
-  return [
-    state.lat.toFixed(3),
-    state.lon.toFixed(3),
-    state.radius,
-    cats.map(c => c.id).join(',')
-  ].join('|');
+let spinControllers = [];
+
+function areaKey(cats) {
+  return [state.lat.toFixed(2), state.lon.toFixed(2), cats.map(c => c.id).slice().sort().join(',')].join('|');
 }
-function readCache(key, maxAge) {
-  const bucket = readJSON('roulette.cache.v1', []);
-  const hit = bucket.find(item => item.key === key);
-  if (!hit || Date.now() - hit.savedAt > maxAge) return null;
-  return hit.places || [];
+function slimPlace(place) {
+  return {
+    id: place.id,
+    name: place.name,
+    cat: place.cat,
+    lat: place.lat,
+    lon: place.lon,
+    hours: place.hours || '',
+    address: place.address || '',
+    setting: place.setting,
+    budget: place.budget
+  };
 }
-function writeCache(key, places) {
-  const bucket = readJSON('roulette.cache.v1', []).filter(item => item.key !== key);
-  bucket.unshift({ key, savedAt: Date.now(), places });
-  writeJSON('roulette.cache.v1', bucket.slice(0, 4));
+function materialize(raw) {
+  const cat = catById(raw.cat);
+  if (!cat || !raw.name || !Number.isFinite(raw.lat) || !Number.isFinite(raw.lon)) return null;
+  return {
+    id: raw.id,
+    kind: 'place',
+    name: raw.name,
+    cat: raw.cat,
+    catLabel: cat.label,
+    emoji: cat.emoji,
+    color: cat.color,
+    lat: raw.lat,
+    lon: raw.lon,
+    hours: raw.hours || '',
+    address: raw.address || '',
+    setting: raw.setting || cat.setting,
+    budget: raw.budget || cat.budget
+  };
 }
-function postOverpass(url, query) {
+function readAreaCache(cats) {
+  const hit = readJSON('roulette.cache.v2', []).find(item => item.key === areaKey(cats));
+  if (!hit || Date.now() - hit.savedAt > DAY_MS || !hit.places || !hit.places.length) return null;
+  return hit;
+}
+function writeAreaCache(cats, places) {
+  const key = areaKey(cats);
+  const bucket = readJSON('roulette.cache.v2', []).filter(item => item.key !== key);
+  bucket.unshift({
+    key,
+    savedAt: Date.now(),
+    radius: state.radius,
+    places: places.map(slimPlace)
+  });
+  writeJSON('roulette.cache.v2', bucket.slice(0, 6));
+}
+function placesFromCache(cats) {
+  const hit = readAreaCache(cats);
+  if (!hit) return null;
+  const places = withDistance(hit.places.map(materialize).filter(Boolean));
+  return places.length ? places : null;
+}
+function placesFromSnapshot(cats) {
+  const source = (typeof FALLBACK_PLACES !== 'undefined' && FALLBACK_PLACES) || [];
+  const ids = new Set(cats.map(c => c.id));
+  const all = source.map(materialize).filter(place => place && ids.has(place.cat));
+  const near = withDistance(all);
+  if (near.length) return { places: near, widened: false };
+  const wider = all.map(place => {
+    const km = haversine(state.lat, state.lon, place.lat, place.lon);
+    return Object.assign({}, place, { km, distanceText: formatDistance(km) });
+  }).filter(place => place.km <= 12).sort((a, b) => a.km - b.km).slice(0, 40);
+  return { places: wider, widened: wider.length > 0 };
+}
+function postOverpass(url, query, signal) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 16000);
+  const timer = setTimeout(() => ctrl.abort(), FETCH_MS);
+  const relay = () => ctrl.abort();
+  if (signal) {
+    if (signal.aborted) ctrl.abort();
+    else signal.addEventListener('abort', relay);
+  }
   return fetch(url, {
     method: 'POST',
     headers: {
@@ -337,35 +394,53 @@ function postOverpass(url, query) {
       throw new Error('timeout');
     }
     return data;
-  }).finally(() => clearTimeout(timer));
+  }).finally(() => {
+    clearTimeout(timer);
+    if (signal) signal.removeEventListener('abort', relay);
+  });
 }
-async function fetchOverpass(cats) {
-  const query = buildQuery(cats);
-  let last = null;
-  for (let i = 0; i < ENDPOINTS.length; i++) {
-    if (i > 0) setStatus('השרת עמוס, מנסים כתובת אחרת…');
-    try {
-      const data = await postOverpass(ENDPOINTS[i], query);
-      return parseElements(data.elements, cats);
-    } catch (err) {
-      last = err;
+function firstSuccess(promises) {
+  return new Promise((resolve, reject) => {
+    let left = promises.length;
+    if (!left) {
+      reject(new Error('empty'));
+      return;
     }
-  }
-  throw last || new Error('overpass');
+    promises.forEach(promise => {
+      Promise.resolve(promise).then(resolve, () => {
+        left -= 1;
+        if (left === 0) reject(new Error('all failed'));
+      });
+    });
+  });
 }
-async function loadPlaces(cats) {
-  const key = cacheKey(cats);
-  const fresh = readCache(key, FRESH_MS);
-  if (fresh) return { places: fresh, stale: false };
-  try {
-    const places = await fetchOverpass(cats);
-    if (places.length) writeCache(key, places);
-    return { places, stale: false };
-  } catch (err) {
-    const stale = readCache(key, STALE_MS);
-    if (stale && stale.length) return { places: stale, stale: true };
-    throw err;
-  }
+function raceOverpass(cats, track) {
+  const query = buildQuery(cats);
+  const controllers = ENDPOINTS.map(() => new AbortController());
+  if (track) spinControllers = controllers;
+  const attempts = ENDPOINTS.map((url, index) => postOverpass(url, query, controllers[index].signal).then(data => {
+    const places = parseElements(data.elements || [], cats);
+    if (!places.length) throw new Error('empty');
+    return places;
+  }));
+  let timer = 0;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('timeout')), FETCH_MS + 700);
+  });
+  return Promise.race([firstSuccess(attempts), timeout]).finally(() => {
+    clearTimeout(timer);
+    controllers.forEach(ctrl => ctrl.abort());
+    if (track) spinControllers = [];
+  });
+}
+function refreshInBackground(cats) {
+  raceOverpass(cats, false).then(places => {
+    if (places && places.length) writeAreaCache(cats, places);
+  }).catch(() => {});
+}
+function abortSpinFetch() {
+  spinControllers.forEach(ctrl => ctrl.abort());
+  spinControllers = [];
 }
 
 function homePool() {
@@ -591,6 +666,9 @@ function setStatus(text, kind) {
   const node = $('status');
   node.textContent = text || '';
   node.className = 'status' + (kind ? ' ' + kind : '');
+}
+function showRetry(on) {
+  $('retryBtn').hidden = !on;
 }
 function setSpinBusy(busy, label) {
   const button = $('spinBtn');
@@ -937,38 +1015,71 @@ async function useGeolocation() {
   }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
 }
 
-async function spin() {
+async function gatherPlaces(cats, force) {
+  if (!force) {
+    const cached = placesFromCache(cats);
+    if (cached) {
+      state.needsRetry = false;
+      refreshInBackground(cats);
+      return { places: cached, source: 'cache', notice: '' };
+    }
+  }
+  state.phase = 'fetch';
+  showRetry(true);
+  setStatus('מחפשים מקומות אמיתיים בסביבה…');
+  const slowNote = setTimeout(() => {
+    if (state.phase === 'fetch') setStatus('השרת עמוס, מנסים כתובת אחרת…');
+  }, 1800);
+  try {
+    const places = withDistance(await raceOverpass(cats, true));
+    if (!places.length) throw new Error('empty');
+    writeAreaCache(cats, places);
+    state.needsRetry = false;
+    return { places, source: 'live', notice: '' };
+  } catch (err) {
+    const snap = placesFromSnapshot(cats);
+    state.needsRetry = true;
+    if (snap.places.length) {
+      const notice = snap.widened
+        ? 'השרתים עמוסים. בחרנו מקום שמור קצת יותר רחוק, כדי שהגלגל לא ייתקע.'
+        : 'השרתים עמוסים, אז זו הצעה ממקומות אמיתיים שנשמרו באזור.';
+      return { places: snap.places, source: 'snapshot', notice };
+    }
+    return { places: [], source: 'empty', notice: '' };
+  } finally {
+    clearTimeout(slowNote);
+    state.phase = '';
+  }
+}
+async function spin(force) {
   if (state.spinning) return;
   const cats = selectedCats();
   if (!cats.length && !state.home) {
     setStatus('בחרו לפחות סוג אחד, או הפעילו רעיונות לבית.', 'error');
+    showRetry(true);
+    state.needsRetry = true;
     return;
   }
   state.spinning = true;
   closeSheets();
   $('wheel').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
   setSpinBusy(true, 'מחפשים…');
-  setStatus(cats.length ? 'מחפשים מקומות אמיתיים בסביבה…' : 'מסובבים בין הרעיונות…');
   let notice = '';
   try {
     let places = [];
     if (cats.length) {
-      try {
-        const loaded = await loadPlaces(cats);
-        places = loaded.places;
-        if (loaded.stale) notice = 'OpenStreetMap לא ענה, אז אלה מקומות מהחיפוש האחרון.';
-      } catch (err) {
-        if (!state.home) {
-          setStatus('OpenStreetMap עמוס כרגע. נסו שוב בעוד רגע, או הפעילו רעיונות לבית.', 'error');
-          return;
-        }
-        notice = 'לא הצלחנו להביא מקומות חדשים, אז הגלגל בחר רעיון לבית.';
-      }
+      const loaded = await gatherPlaces(cats, force === true);
+      places = loaded.places;
+      notice = loaded.notice;
+      if (loaded.source === 'cache') setStatus('מסובבים לפי מקומות שנשמרו…');
+    } else {
+      setStatus('מסובבים בין הרעיונות…');
     }
-    let pool = withDistance(places);
+    let pool = places;
     if (state.home) pool = pool.concat(homePool());
     if (!pool.length) {
-      setStatus('לא מצאנו מקומות עם שם ברדיוס הזה. תגדילו את המרחק או תוסיפו קטגוריות.', 'error');
+      state.needsRetry = true;
+      setStatus('לא מצאנו מקום כרגע. לחצו על «נסו שוב».', 'error');
       return;
     }
     const filtered = applySetting(pool);
@@ -981,23 +1092,28 @@ async function spin() {
     const arranged = buildSlices(filtered.pool, winner);
     view.slices = arranged.slices;
     view.spun = true;
-    const found = places.length;
-    if (found) {
-      setStatus('נמצאו ' + placeCountLabel(found) + '. מסובבים…');
-    } else {
-      setStatus('מסובבים…');
-    }
+    setStatus(places.length ? 'נמצאו ' + placeCountLabel(places.length) + '. מסובבים…' : 'מסובבים…');
+    showRetry(false);
     setSpinBusy(true, 'מסתובב…');
     await animateTo(spinTarget(arranged.index, arranged.slices.length), arranged.slices, winner);
     setStatus('');
     renderResult(winner, notice);
   } finally {
     state.spinning = false;
+    state.phase = '';
     setSpinBusy(false);
+    showRetry(!!state.needsRetry);
   }
 }
 
 function bind() {
+  $('retryBtn').addEventListener('click', () => {
+    if (state.phase === 'fetch') {
+      abortSpinFetch();
+      return;
+    }
+    spin(true);
+  });
   $('geoBtn').addEventListener('click', useGeolocation);
   $('city').addEventListener('change', () => {
     if (!$('city').value) {
