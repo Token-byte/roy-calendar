@@ -1,10 +1,10 @@
 {
-  "updatedAt": "2026-11-20T14:53:35.837483+02:00",
+  "updatedAt": "2026-11-20T23:40:33.913384+02:00",
   "sources": [
     {
       "id": "makore",
       "ok": true,
-      "count": 31,
+      "count": 29,
       "error": null
     },
     {
@@ -23,7 +23,7 @@
       "id": "eventbrite",
       "ok": false,
       "count": 0,
-      "error": "RuntimeError: no JSON-LD events"
+      "error": "HTTPError: HTTP Error 405: Not Allowed"
     },
     {
       "id": "tixwise",
@@ -39,215 +39,6 @@
     }
   ],
   "events": [
-    {
-      "title": "CAPPELLA FRIDAY MAINSTREAM / 20.11",
-      "start": "2026-11-20T19:00:00Z",
-      "venue": "הארבעה 28, תל אביב-יפו, ישראל",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/d46d28df7611efa78ac92066044a486e56fa12c26492c6c18d838306fb493e9d",
-      "source": "makore",
-      "price": null
-    },
-    {
-      "title": "HIVE Rothschild Roof Top",
-      "start": "2026-11-20T19:00:00Z",
-      "venue": "📍 HIVE TLV · תל אביב",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/e187b3a4edfba8143b3b766c455989bee62e8b2bbeec5fb5592cd418bf84f504",
-      "source": "makore",
-      "price": "53"
-    },
-    {
-      "title": "Freedom Fighters",
-      "start": "2026-11-20T19:00:00Z",
-      "venue": "הדוב הירוק, הוד השרון - הפארק האקולוגי",
-      "city": "הוד השרון",
-      "lat": 32.15,
-      "lon": 34.89,
-      "url": "https://www.makore.co.il/event/ac4b8e11442be91ef703c8d0ce3320dadc061d7e1409d62c62d0b26d2cc79adc",
-      "source": "makore",
-      "price": "139.00"
-    },
-    {
-      "title": "FULL MOON PARTY 20.11 - ADIROS & NARKISSI",
-      "start": "2026-11-20T19:00:00Z",
-      "venue": "סילו תרבות, הוד השרון",
-      "city": "הוד השרון",
-      "lat": 32.15,
-      "lon": 34.89,
-      "url": "https://www.makore.co.il/event/ddbd8e46856b676e98b40876a915835db6ccb0c58c9132d956465c8dd2e15944",
-      "source": "makore",
-      "price": null
-    },
-    {
-      "title": "פלאשבק בשישי",
-      "start": "2026-11-20T19:30:00Z",
-      "venue": "אוזן בר תל אביב",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/742dbc9e08f917c795d833d7d691f7d773b3729e1850ca642a5dd44584dc3796",
-      "source": "makore",
-      "price": null
-    },
-    {
-      "title": "HIVE ROTCHILD",
-      "start": "2026-11-20T20:00:00Z",
-      "venue": "שדרות רוטשילד 33, תל אביב-יפו, ישראל",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/32eb10b23a72cc31208d02b3191e4dda1422603fc0255eebc43efa9a99a01ba5",
-      "source": "makore",
-      "price": null
-    },
-    {
-      "title": "חיי לילה בתל אביב: סבב ברים מטורף עם תיירים מכל העולם",
-      "start": "2026-11-20T20:00:00Z",
-      "venue": "יהודה הלוי, תל אביב-יפו",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/6fe427625a9a22345ef850e740c4e29e18981a71143233212067544c9f8ce8dd",
-      "source": "makore",
-      "price": "מבוגר: ₪85"
-    },
-    {
-      "title": "סבב ברים שמח בתל אביב!!!🍻",
-      "start": "2026-11-20T20:00:00Z",
-      "venue": "יהודה לוי 47 (צ'ופיטוס בר)",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/9c4b731d334a92a26fe1a54101da67d21665a60f6348637406db544de61ad780",
-      "source": "makore",
-      "price": "80"
-    },
-    {
-      "title": "Friday Shalvata MainStream 20.11",
-      "start": "2026-11-20T20:30:00Z",
-      "venue": "שלוותה נמל תל אביב, התערוכה, תל אביב-יפו, ישראל",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/10b9bd5847808657ad2c0c6d24247eecaef2809d6b4fb11cc8c669e96f0823ec",
-      "source": "makore",
-      "price": null
-    },
-    {
-      "title": "FRIDAY MAINSTREAM | 20.11",
-      "start": "2026-11-20T20:30:00Z",
-      "venue": "Moonchild - מון צ'ילד, Tel Aviv-Yafo, ישראל",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/6ca488ec53c4b613c407d71cb906390192a49dc39595c08fcb8c2036ea63fe8c",
-      "source": "makore",
-      "price": null
-    },
-    {
-      "title": "ASHER SWISSA • FRIDAY OPEN AIR",
-      "start": "2026-11-20T20:30:00Z",
-      "venue": "Moonchild - מון צ'ילד, Tel Aviv-Yafo, ישראל",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/8546474bda7b5ece5de47c3abaeab91473f87c45d34ade17b401f36710e7eafc",
-      "source": "makore",
-      "price": null
-    },
-    {
-      "title": "FRIDAY // GOAT 20.11",
-      "start": "2026-11-20T20:30:00Z",
-      "venue": "GOAT TLV, שדרות רוטשילד, תל אביב-יפו, ישראל",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/ad07448c132132dc7eb861a0df0c11f67153bc91f05dee4ffa79555de2ee645b",
-      "source": "makore",
-      "price": null
-    },
-    {
-      "title": "JIMMY WHO | FRIDAY MAINSTREAM | 20.11",
-      "start": "2026-11-20T20:30:00Z",
-      "venue": "שדרות רוטשילד 24, תל אביב-יפו, ישראל",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/e8011db271dc478a3f77b0e8a7a239745fa51faee88728ca2d3b7171cebea901",
-      "source": "makore",
-      "price": null
-    },
-    {
-      "title": "ASHER SWISSA במון צ'יילד · אופן אייר",
-      "start": "2026-11-20T21:00:00Z",
-      "venue": "📍 מון צ'יילד נמל תל אביב · תל אביב",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/0e583a009a65a962cde68251ad5564fe5d44a4e3a6a8a2dc83d780f3825f54ce",
-      "source": "makore",
-      "price": "87.40"
-    },
-    {
-      "title": "Friday// Rabbit //20.11//",
-      "start": "2026-11-20T21:00:00Z",
-      "venue": "שדרות רוטשילד 14, תל אביב-יפו, ישראל",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/2c4237a7b531ef0468ceeaf228639f9b1faaccfda426e3871b34c8c67c94dfcc",
-      "source": "makore",
-      "price": null
-    },
-    {
-      "title": "Friday at Panda | 20.11",
-      "start": "2026-11-20T21:00:00Z",
-      "venue": "נחלת בנימין 52, תל אביב-יפו, ישראל",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/e62f8b3fc4e676ad1b066aa0cbf70f7818f05ce62d43cc8b4b67ff4e8471bca7",
-      "source": "makore",
-      "price": null
-    },
-    {
-      "title": "Mackor Abnormal X Yotam Avni All Night Long",
-      "start": "2026-11-20T21:59:00Z",
-      "venue": "Rothschild Boulevard 6, תל אביב-יפו, ישראל",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/44c06e5917ef141955c591fc97b0c49e533bfec0d6201814a7584ab632af971d",
-      "source": "makore",
-      "price": null
-    },
-    {
-      "title": "ADAM TEN ב-ROOM 48 · שישי אלקטרוני",
-      "start": "2026-11-20T21:59:00Z",
-      "venue": "📍 ROOM 48 תל אביב · תל אביב",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/5bfe259ca93ab2ba292803fcc7df16f9571d0a342a6a5edab7c17b685d1bc72b",
-      "source": "makore",
-      "price": "128.40"
-    },
-    {
-      "title": "אקו x מיצי: THE NEW ACT!",
-      "start": "2026-11-20T22:00:00Z",
-      "venue": "בארבי, נמל יפו",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/fb77e7f57b33c636762bdf6574fd90745b9656607b45700e3e3bdda55cc23ada",
-      "source": "makore",
-      "price": "145"
-    },
     {
       "title": "CHEERS! WINE FESTIVAL & SUNSET PARTY",
       "start": "2026-11-21T12:00:00Z",
@@ -293,6 +84,61 @@
       "price": "80"
     },
     {
+      "title": "MAOR BUZAGLO & NOYA CHEKORAL SATURDAY GOAT//21.11",
+      "start": "2026-11-21T20:30:00Z",
+      "venue": "GOAT TLV, שדרות רוטשילד, תל אביב-יפו, ישראל",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/bac7ec5c9b39468db1ec65e8379a540328777779748557e9ae54c06b2e553865",
+      "source": "makore",
+      "price": null
+    },
+    {
+      "title": "BUBBLES X ADAM TEN 21.11 | SATURDAY | 22:30",
+      "start": "2026-11-21T20:30:00Z",
+      "venue": "Shalvata TLV - שלוותה נמל תל אביב, התערוכה, תל אביב-יפו, ישראל",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/e14e2a5412e5bc9249290bc9d808ed9f02fca70a54f1d1a623816c8428765c38",
+      "source": "makore",
+      "price": null
+    },
+    {
+      "title": "SATURDAY JIMMYwHO x MAINSTREAM ❤️",
+      "start": "2026-11-21T21:00:00Z",
+      "venue": "JIMMYWHO? Bar & Lounge, שדרות רוטשילד, תל אביב-יפו, ישראל",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/321ff0a8558a4ada4a984699dc0450d37090fa13f32a574b74cde82cc5988800",
+      "source": "makore",
+      "price": null
+    },
+    {
+      "title": "SATURDAY HIP HOP PANDA | PANDA MARKET | 21.11 | PANDA TLV",
+      "start": "2026-11-21T21:00:00Z",
+      "venue": "נחלת בנימין 52, תל אביב",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/88bbe10453a255e90fc58e71ab27472e2a35e3d4ba3814812314568af9edc923",
+      "source": "makore",
+      "price": null
+    },
+    {
+      "title": "SATURDAY RABBIT X OMER KEINAN // 21.11",
+      "start": "2026-11-21T21:00:00Z",
+      "venue": "שדרות רוטשילד 14, תל אביב-יפו, ישראל",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/fe8f40972f4eddcdcbda11e0c24eadae5b4d5add8ff0a8f1c304cbbade9ea493",
+      "source": "makore",
+      "price": null
+    },
+    {
       "title": "אקסטטיק דאנס השרון",
       "start": "2026-11-22T22:00:00Z",
       "venue": "סילו תרבות, הוד השרון",
@@ -300,6 +146,17 @@
       "lat": 32.15,
       "lon": 34.89,
       "url": "https://www.makore.co.il/event/c051a16fa46d5278e20b2bd959975ad2dd61fbc3224558d8da71e70376935c37",
+      "source": "makore",
+      "price": null
+    },
+    {
+      "title": "מסיבת קצב וריקודים",
+      "start": "2026-11-24T14:00:00Z",
+      "venue": "מועדון לאזרחים ותיקים נווה גולן, שדרות הבעש\"ט 14, תל אביב - יפו להצגת מיקום על גבי מפה >>",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/64655e259dcd9a294481790f23658ccb5b2829d15153f0ff3b6746938d4e58b7",
       "source": "makore",
       "price": null
     },
@@ -313,6 +170,28 @@
       "url": "https://www.makore.co.il/event/e70ed2a07d0541b0c74c489fda979f7d26e0f62a350ee4d68dd968f5deb1c063",
       "source": "makore",
       "price": "20"
+    },
+    {
+      "title": "רחבת הריקודים",
+      "start": "2026-11-24T19:30:00Z",
+      "venue": "החניה",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/b5fd51ee89cf2e15bf7e52f7b18e365a281245bc79b2cf6bc5b64a6bb9e3bd5a",
+      "source": "makore",
+      "price": "90"
+    },
+    {
+      "title": "יהיה דיסקו",
+      "start": "2026-11-25T15:00:00Z",
+      "venue": "מועדון לאזרחים ותיקים צוקר, רש\"י 52, תל אביב - יפו להצגת מיקום על גבי מפה >>",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/ed6f12757ccbbdf34dd71983ea460429e69441880575883bc7dbc7c88b16e137",
+      "source": "makore",
+      "price": null
     },
     {
       "title": "Silo dance celebration - YANO SADE & DJ ELI",
@@ -348,6 +227,94 @@
       "price": "35"
     },
     {
+      "title": "חיי לילה בתל אביב: סבב ברים מטורף עם תיירים מכל העולם",
+      "start": "2026-11-26T20:00:00Z",
+      "venue": "יהודה הלוי, תל אביב-יפו",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/6087261fe0fab83fcce0575c56d46c5896fbc3a85b9a3e6f67adb1b2aa2e6cea",
+      "source": "makore",
+      "price": "מבוגר: ₪85"
+    },
+    {
+      "title": "סבב ברים שמח בתל אביב!!!🍻",
+      "start": "2026-11-26T20:00:00Z",
+      "venue": "יהודה לוי 47 (צ'ופיטוס בר)",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/a6b0dbbb9d624708d27de6464e1559445c8d751ab7c4c1bca87c02022be8b49b",
+      "source": "makore",
+      "price": "80"
+    },
+    {
+      "title": "Hamishi Of JustLoveit",
+      "start": "2026-11-26T20:30:00Z",
+      "venue": "📍 האנגר 17 · תל אביב",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/18b31329a8dfa8b97b71528fede2b9a6805682df33873720c112f5b0d6ce8396",
+      "source": "makore",
+      "price": "89"
+    },
+    {
+      "title": "One Night In The City || 26.11.26 || Haoman 17 tlv",
+      "start": "2026-11-26T20:30:00Z",
+      "venue": "Haoman 17 Tel Aviv - האומן 17 תל אביב, אברבנאל, תל אביב-יפו, ישראל",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/1ac5fca68a8b43449f4e82fffc33b3ea1c558d0510013a0ffad45de5bdf8f342",
+      "source": "makore",
+      "price": null
+    },
+    {
+      "title": "AMIRA FESTIVAL האומן 17",
+      "start": "2026-11-26T20:30:00Z",
+      "venue": "📍 האומן 17 תל אביב · תל אביב",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/843d6fc9d771f79cc897a8a816d74562e0a235e0677ed920f6f4a7b997b53409",
+      "source": "makore",
+      "price": "203.50"
+    },
+    {
+      "title": "Thursday Moon במון צ'יילד · מיינסטרים",
+      "start": "2026-11-26T20:30:00Z",
+      "venue": "📍 מון צ'יילד נמל תל אביב · תל אביב",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/a0ca72cfeecd3f8fdd63d8a720f4832877da35ac243614f74f31798412769742",
+      "source": "makore",
+      "price": "109"
+    },
+    {
+      "title": "MITA GAMI x CHAIM | Thursday 26.11 | THE PLACE",
+      "start": "2026-11-26T21:30:00Z",
+      "venue": "דרך קיבוץ גלויות 52, תל אביב-יפו, ישראל",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/34987542fcd043a059ef0140ca135a9df1eff4b02e8982c83bc857f28cc1d0a8",
+      "source": "makore",
+      "price": null
+    },
+    {
+      "title": "מסיבת העשורים הגדולה - ריקודים, תצוגות, ומלא הפתעות",
+      "start": "2026-11-26T22:00:00Z",
+      "venue": "בארבי, נמל יפו",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/b6f5b31e524d5020cf774648ebb3f45f7276de317a0711f6f456f15d6417b121",
+      "source": "makore",
+      "price": "88"
+    },
+    {
       "title": "OMRI SMADAR",
       "start": "2026-11-27T19:00:00Z",
       "venue": "הדוב הירוק, הוד השרון - הפארק האקולוגי",
@@ -355,6 +322,17 @@
       "lat": 32.15,
       "lon": 34.89,
       "url": "https://www.makore.co.il/event/888420a052776ba2f8dd4cafd25c47f9bfb963480ba3bc9d60457289f62424c1",
+      "source": "makore",
+      "price": null
+    },
+    {
+      "title": "ALL NIGHT LONG חוזרים לפינגווין | משולש הזהב | ניו לייף ★ NEW WAVE • DARK 80s • EBM",
+      "start": "2026-11-27T20:00:00Z",
+      "venue": "The wave club, יד חרוצים, תל אביב-יפו, ישראל",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/0117dd6d4a4e25d0aa2fb1b961279234af51f44e8eded332ca7b583e0cbf8289",
       "source": "makore",
       "price": null
     },
