@@ -568,7 +568,7 @@ function elamaayanSearch(name) {
 }
 async function loadEvents() {
   try {
-    const response = await fetch('./data/events.json?v=5', { cache: 'no-cache' });
+    const response = await fetch('./data/events.json?v=6', { cache: 'no-cache' });
     if (!response.ok) return;
     const data = await response.json();
     if (data && Array.isArray(data.events)) EVENT_DATA = data;
@@ -1267,16 +1267,34 @@ async function gatherPlaces(cats, force) {
 }
 const COUNTER_BASE = 'https://abacus.jasoncameron.dev';
 const COUNTER_NS = 'roy-roulette';
+const SPINS_KEY = 'roulette.counter.spins';
+const VISITS_KEY = 'roulette.counter.visits';
 let spinShown = 0;
 
+function storedCount(key) {
+  try {
+    const value = Number(localStorage.getItem(key));
+    return Number.isFinite(value) && value >= 0 ? value : null;
+  } catch (err) {
+    return null;
+  }
+}
+function storeCount(key, value) {
+  try { localStorage.setItem(key, String(value)); } catch (err) { /* private mode */ }
+}
 function spinCountText(count) {
   if (count === 1) return 'הגלגל כבר הסתובב פעם אחת';
   if (count === 2) return 'הגלגל כבר הסתובב פעמיים';
   return 'הגלגל כבר הסתובב ' + count.toLocaleString('he-IL') + ' פעמים';
 }
 function paintSpinCount(count) {
-  $('spinCountLine').textContent = count === 0 ? 'הגלגל עוד לא הסתובב' : spinCountText(count);
+  $('spinCountLine').textContent = spinCountText(count);
   $('spinCount').hidden = false;
+}
+function paintVisits(count) {
+  const line = $('visitCountLine');
+  line.hidden = false;
+  line.textContent = count === 1 ? 'נפתח פעם אחת' : 'נפתח ' + count.toLocaleString('he-IL') + ' פעמים';
 }
 function animateCount(from, to) {
   if (reduceMotion || to <= from) {
@@ -1296,42 +1314,56 @@ function animateCount(from, to) {
   };
   requestAnimationFrame(step);
 }
-async function counterRequest(path) {
+function counterRequest(path) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 4000);
-  try {
-    const response = await fetch(COUNTER_BASE + path, { cache: 'no-store', signal: ctrl.signal });
-    if (!response.ok) throw new Error('counter');
-    const data = await response.json();
-    if (!Number.isFinite(data.value)) throw new Error('counter');
-    return data.value;
-  } finally {
-    clearTimeout(timer);
-  }
+  const timer = setTimeout(() => ctrl.abort(), 5000);
+  return fetch(COUNTER_BASE + path, { cache: 'no-store', signal: ctrl.signal })
+    .then(async (response) => {
+      if (!response.ok) throw new Error('counter');
+      const data = await response.json();
+      if (!Number.isFinite(data.value)) throw new Error('counter');
+      return data.value;
+    })
+    .finally(() => clearTimeout(timer));
+}
+function loadSpins() {
+  const saved = storedCount(SPINS_KEY);
+  if (saved != null && saved > 0) animateCount(0, saved);
+  return counterRequest('/get/' + COUNTER_NS + '/spins').then(value => {
+    storeCount(SPINS_KEY, Math.max(value, spinShown));
+    if (value >= spinShown) animateCount(spinShown, value);
+    else paintSpinCount(spinShown);
+  }).catch(() => {
+    if (storedCount(SPINS_KEY) == null && !spinShown) $('spinCount').hidden = true;
+  });
+}
+function loadVisits() {
+  const saved = storedCount(VISITS_KEY);
+  if (saved != null && saved > 0) paintVisits(saved);
+  let seen = false;
+  try { seen = localStorage.getItem('roulette.seen.v1') === '1'; } catch (err) { seen = true; }
+  const path = (seen ? '/get/' : '/hit/') + COUNTER_NS + '/visits';
+  return counterRequest(path).then(value => {
+    try { localStorage.setItem('roulette.seen.v1', '1'); } catch (err) { /* ignore */ }
+    storeCount(VISITS_KEY, value);
+    paintVisits(value);
+  }).catch(() => {
+    if (storedCount(VISITS_KEY) == null) $('visitCountLine').hidden = true;
+  });
+}
+function initCounters() {
+  loadSpins();
+  loadVisits();
 }
 function recordSpin() {
-  counterRequest('/hit/' + COUNTER_NS + '/spins')
-    .then(value => animateCount(spinShown, value))
-    .catch(() => {});
-}
-async function initCounters() {
-  try {
-    const spins = await counterRequest('/get/' + COUNTER_NS + '/spins');
-    if (spins >= spinShown) animateCount(spinShown, spins);
-  } catch (err) {
-    if (!spinShown) $('spinCount').hidden = true;
-  }
-  try {
-    const seen = localStorage.getItem('roulette.seen.v1') === '1';
-    const visits = await counterRequest((seen ? '/get/' : '/hit/') + COUNTER_NS + '/visits');
-    if (!seen) localStorage.setItem('roulette.seen.v1', '1');
-    const line = $('visitCountLine');
-    line.hidden = false;
-    line.textContent = visits === 1 ? 'נפתח פעם אחת' : 'נפתח ' + visits.toLocaleString('he-IL') + ' פעמים';
-  } catch (err) {
-    const line = $('visitCountLine');
-    if (line) line.hidden = true;
-  }
+  const next = Math.max(spinShown, storedCount(SPINS_KEY) || 0) + 1;
+  storeCount(SPINS_KEY, next);
+  animateCount(spinShown, next);
+  counterRequest('/hit/' + COUNTER_NS + '/spins').then(value => {
+    const shown = Math.max(value, spinShown);
+    storeCount(SPINS_KEY, shown);
+    if (shown !== spinShown) animateCount(spinShown, shown);
+  }).catch(() => {});
 }
 async function spin(force) {
   if (state.spinning) return;

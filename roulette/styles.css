@@ -426,21 +426,31 @@ input[type="range"] {
   line-height: 1.45;
 }
 .colophon a { color: inherit; }
-.credit {
-  display: block;
+.fineprint {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 4px 10px;
   margin-top: 8px;
+}
+.credit {
   font-size: 13px;
   text-decoration: none;
 }
 .credit:hover { text-decoration: underline; }
 .spin-count {
-  margin: 10px 0 0;
-  text-align: center;
+  margin: 0;
   color: var(--muted);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
-.spin-count-sub { display: block; margin-top: 2px; font-size: 12px; }
+.spin-count-sub {
+  margin: 2px 0 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
 .install-hint {
   margin: 0 0 8px;
   padding: 10px 12px;
