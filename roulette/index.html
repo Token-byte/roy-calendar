@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=4">
+<link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
 <div class="app">
@@ -109,6 +109,10 @@
         <strong id="hubName">סובבו</strong>
       </div>
     </div>
+    <p class="spin-count" id="spinCount" hidden>
+      <span id="spinCountLine"></span>
+      <span class="spin-count-sub" id="visitCountLine" hidden></span>
+    </p>
   </div>
 
   <div class="dock">
@@ -129,6 +133,7 @@
   <footer class="colophon">
     מקומות אמיתיים מ-<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>.
     שעות הפתיחה לא תמיד מעודכנות.
+    <a class="credit" href="https://roy-fridman-portfolio.hayakaner.chatgpt.site" target="_blank" rel="noopener">נבנה על ידי רוי</a>
   </footer>
 
   <p class="install-hint" id="installHint" hidden>
@@ -145,7 +150,7 @@
 <noscript>
   <p class="noscript">כדי לסובב את הרולטה צריך להפעיל JavaScript.</p>
 </noscript>
-<script src="fallback-places.js?v=4"></script>
-<script src="app.js?v=4"></script>
+<script src="fallback-places.js?v=5"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>

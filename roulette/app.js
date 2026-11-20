@@ -568,7 +568,7 @@ function elamaayanSearch(name) {
 }
 async function loadEvents() {
   try {
-    const response = await fetch('./data/events.json?v=4', { cache: 'no-cache' });
+    const response = await fetch('./data/events.json?v=5', { cache: 'no-cache' });
     if (!response.ok) return;
     const data = await response.json();
     if (data && Array.isArray(data.events)) EVENT_DATA = data;
@@ -1265,6 +1265,74 @@ async function gatherPlaces(cats, force) {
     state.phase = '';
   }
 }
+const COUNTER_BASE = 'https://abacus.jasoncameron.dev';
+const COUNTER_NS = 'roy-roulette';
+let spinShown = 0;
+
+function spinCountText(count) {
+  if (count === 1) return 'הגלגל כבר הסתובב פעם אחת';
+  if (count === 2) return 'הגלגל כבר הסתובב פעמיים';
+  return 'הגלגל כבר הסתובב ' + count.toLocaleString('he-IL') + ' פעמים';
+}
+function paintSpinCount(count) {
+  $('spinCountLine').textContent = count === 0 ? 'הגלגל עוד לא הסתובב' : spinCountText(count);
+  $('spinCount').hidden = false;
+}
+function animateCount(from, to) {
+  if (reduceMotion || to <= from) {
+    spinShown = to;
+    paintSpinCount(to);
+    return;
+  }
+  const started = performance.now();
+  const duration = 700;
+  const step = (now) => {
+    const t = Math.min(1, (now - started) / duration);
+    const value = Math.round(from + (to - from) * (1 - Math.pow(1 - t, 3)));
+    spinShown = value;
+    paintSpinCount(value);
+    if (t < 1) requestAnimationFrame(step);
+    else { spinShown = to; paintSpinCount(to); }
+  };
+  requestAnimationFrame(step);
+}
+async function counterRequest(path) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 4000);
+  try {
+    const response = await fetch(COUNTER_BASE + path, { cache: 'no-store', signal: ctrl.signal });
+    if (!response.ok) throw new Error('counter');
+    const data = await response.json();
+    if (!Number.isFinite(data.value)) throw new Error('counter');
+    return data.value;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+function recordSpin() {
+  counterRequest('/hit/' + COUNTER_NS + '/spins')
+    .then(value => animateCount(spinShown, value))
+    .catch(() => {});
+}
+async function initCounters() {
+  try {
+    const spins = await counterRequest('/get/' + COUNTER_NS + '/spins');
+    if (spins >= spinShown) animateCount(spinShown, spins);
+  } catch (err) {
+    if (!spinShown) $('spinCount').hidden = true;
+  }
+  try {
+    const seen = localStorage.getItem('roulette.seen.v1') === '1';
+    const visits = await counterRequest((seen ? '/get/' : '/hit/') + COUNTER_NS + '/visits');
+    if (!seen) localStorage.setItem('roulette.seen.v1', '1');
+    const line = $('visitCountLine');
+    line.hidden = false;
+    line.textContent = visits === 1 ? 'נפתח פעם אחת' : 'נפתח ' + visits.toLocaleString('he-IL') + ' פעמים';
+  } catch (err) {
+    const line = $('visitCountLine');
+    if (line) line.hidden = true;
+  }
+}
 async function spin(force) {
   if (state.spinning) return;
   const cats = selectedCats();
@@ -1277,6 +1345,7 @@ async function spin(force) {
   state.spinning = true;
   closeSheets();
   hapticTap();
+  recordSpin();
   $('wheel').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
   setSpinBusy(true, 'מסתובב…');
   showRetry(true);
@@ -1512,6 +1581,7 @@ renderIdeas();
 saveFavorites(favorites());
 showPlaceholder();
 loadEvents();
+initCounters();
 maybeInstallHint();
 registerSw();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => drawWheel(view.slices));
