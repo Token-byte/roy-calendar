@@ -18,7 +18,16 @@ const CATEGORIES = [
   { id: 'cafes', label: 'בתי קפה', emoji: '☕', color: '#8d6430', setting: 'both', budget: 'cheap', limit: 24,
     filters: [['amenity', 'cafe']] },
   { id: 'nature', label: 'טבע ופארקים', emoji: '🌳', color: '#3e6b45', setting: 'out', budget: 'free', limit: 24,
-    filters: [['leisure', 'park'], ['leisure', 'nature_reserve'], ['leisure', 'garden']] },
+    filters: [['leisure', 'park'], ['leisure', 'garden']] },
+  { id: 'hikes', label: 'טיולים ומעיינות', emoji: '💧', color: '#1f7a62', setting: 'out', budget: 'free', wide: true,
+    filters: [
+      ['natural', 'spring'], ['natural', 'waterfall'], ['natural', 'peak'],
+      ['waterway', 'waterfall'], ['tourism', 'viewpoint'],
+      ['historic', 'ruins'], ['historic', 'archaeological_site'],
+      ['leisure', 'nature_reserve'], ['boundary', 'protected_area'],
+      ['highway', 'trailhead'], ['route', 'hiking']
+    ] },
+  { id: 'parties', label: 'מסיבות ואירועים', emoji: '🎉', color: '#9a3d6a', setting: 'in', budget: 'mid', local: true, filters: [] },
   { id: 'beach', label: 'חוף ים', emoji: '🏖️', color: '#2f6f93', setting: 'out', budget: 'free', limit: 20,
     filters: [['natural', 'beach'], ['leisure', 'beach_resort']] },
   { id: 'attractions', label: 'אטרקציות וחדרי בריחה', emoji: '🎯', color: '#6a5494', setting: 'both', budget: 'mid', limit: 24,
@@ -32,7 +41,7 @@ const CATEGORIES = [
   { id: 'culture', label: 'מוזיאונים ותרבות', emoji: '🏛️', color: '#5c4d68', setting: 'in', budget: 'mid', limit: 20,
     filters: [['tourism', 'museum'], ['tourism', 'gallery'], ['amenity', 'arts_centre'], ['amenity', 'theatre']] }
 ];
-const MATCH_ORDER = ['bowling', 'attractions', 'cinema', 'beach', 'culture', 'bars', 'cafes', 'sport', 'food', 'nature'];
+const MATCH_ORDER = ['hikes', 'bowling', 'attractions', 'cinema', 'beach', 'culture', 'bars', 'cafes', 'sport', 'food', 'nature'];
 const DEFAULT_CATS = ['food', 'bars', 'cafes', 'nature', 'attractions', 'cinema'];
 
 const CITIES = [
@@ -120,7 +129,7 @@ function loadSettings() {
   if (Array.isArray(saved.categories) && saved.categories.length) {
     state.categories = new Set(saved.categories.filter(id => CATEGORIES.some(c => c.id === id)));
   }
-  if (saved.radius >= 1 && saved.radius <= 30) state.radius = saved.radius;
+  if (saved.radius >= 1 && saved.radius <= 100) state.radius = saved.radius;
   if (['any', 'cheap', 'mid', 'high'].includes(saved.budget)) state.budget = saved.budget;
   if (['any', 'in', 'out'].includes(saved.setting)) state.setting = saved.setting;
   state.home = !!saved.home;
@@ -250,19 +259,46 @@ function buildQuery(cats) {
   const lat = state.lat.toFixed(5);
   const lon = state.lon.toFixed(5);
   const meters = Math.round(state.radius * 1000);
-  const grouped = new Map();
-  cats.forEach(cat => {
-    cat.filters.forEach(([key, value]) => {
-      if (!grouped.has(key)) grouped.set(key, []);
-      if (!grouped.get(key).includes(value)) grouped.get(key).push(value);
+  const lines = ['[out:json][timeout:12];'];
+  const near = cats.filter(cat => !cat.wide);
+  const wide = cats.filter(cat => cat.wide);
+  const pushGroup = (group, around) => {
+    const grouped = new Map();
+    group.forEach(cat => {
+      cat.filters.forEach(([key, value]) => {
+        if (!grouped.has(key)) grouped.set(key, []);
+        if (!grouped.get(key).includes(value)) grouped.get(key).push(value);
+      });
     });
-  });
-  const lines = ['[out:json][timeout:8];', '('];
-  grouped.forEach((values, key) => {
-    const type = (key === 'amenity' || key === 'sport') ? 'node' : 'nwr';
-    lines.push('  ' + type + '["' + key + '"~"^(' + values.join('|') + ')$"](around:' + meters + ',' + lat + ',' + lon + ');');
-  });
-  lines.push(');', 'out center 36;');
+    if (!grouped.size) return;
+    lines.push('(');
+    grouped.forEach((values, key) => {
+      const type = (key === 'amenity' || key === 'sport' || key === 'natural' || key === 'historic' || key === 'highway' || key === 'waterway') ? 'node' : (key === 'route' ? 'relation' : 'nwr');
+      lines.push('  ' + type + '["' + key + '"~"^(' + values.join('|') + ')$"](around:' + around + ',' + lat + ',' + lon + ');');
+    });
+    lines.push(');');
+  };
+  if (near.length) {
+    pushGroup(near, Math.min(meters, 30000));
+    lines.push('out center 28;');
+  }
+  if (wide.length) {
+    const around = Math.min(meters, 100000);
+    const statements = [
+      ['node', 'natural', 'spring|waterfall|peak', 12],
+      ['node', 'waterway', 'waterfall', 4],
+      ['node', 'tourism', 'viewpoint', 6],
+      ['node', 'historic', 'ruins|archaeological_site', 6],
+      ['nwr', 'leisure', 'nature_reserve', 4],
+      ['nwr', 'boundary', 'protected_area', 3],
+      ['node', 'highway', 'trailhead', 4]
+    ];
+    if (meters <= 40000) statements.push(['relation', 'route', 'hiking', 5]);
+    statements.forEach(([type, key, pattern, limit]) => {
+      lines.push(type + '["' + key + '"~"^(' + pattern + ')$"]["name"](around:' + around + ',' + lat + ',' + lon + ');');
+      lines.push('out center ' + limit + ';');
+    });
+  }
   return lines.join('\n');
 }
 function parseElements(elements, cats) {
@@ -441,6 +477,105 @@ function refreshInBackground(cats) {
 function abortSpinFetch() {
   spinControllers.forEach(ctrl => ctrl.abort());
   spinControllers = [];
+}
+
+const EVENT_LINKS = [
+  ['Go-Out', 'https://go-out.co/'],
+  ['Tickchak', 'https://live.tickchak.co.il/parties/thisWeek'],
+  ['Eventbrite', 'https://www.eventbrite.com/d/israel--tel-aviv/parties/'],
+  ['Tixwise', 'https://www.tixwise.co.il/'],
+  ['Leaan', 'https://www.leaan.co.il/events'],
+  ['Makore', 'https://www.makore.co.il/']
+];
+const EVENT_CITIES = [
+  ['תל אביב', 32.0853, 34.7818],
+  ['הרצליה', 32.1624, 34.8443],
+  ['רעננה', 32.1847, 34.8706],
+  ['כפר סבא', 32.175, 34.9069],
+  ['הוד השרון', 32.15, 34.89],
+  ['פתח תקווה', 32.084, 34.8878],
+  ['רמת גן', 32.0684, 34.8248],
+  ['גבעתיים', 32.072, 34.812],
+  ['רמת השרון', 32.1461, 34.8394],
+  ['ראשון לציון', 31.973, 34.7925],
+  ['חולון', 32.0158, 34.7874],
+  ['בת ים', 32.0132, 34.748],
+  ['גוש דן', 32.0853, 34.7818]
+];
+let EVENT_DATA = { updatedAt: '', sources: [], events: [] };
+
+function cityPoint(name) {
+  const blob = String(name || '');
+  const hit = EVENT_CITIES.find(([label]) => blob.includes(label));
+  return hit ? { lat: hit[1], lon: hit[2] } : null;
+}
+function formatEventWhen(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('he-IL', {
+    weekday: 'short', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem'
+  }).format(date);
+}
+function formatUpdated(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('he-IL', {
+    day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem'
+  }).format(date);
+}
+function upcomingEvents() {
+  const now = Date.now() - 3 * 60 * 60 * 1000;
+  const horizon = Date.now() + 10 * 24 * 60 * 60 * 1000;
+  return (EVENT_DATA.events || []).filter(event => {
+    const time = Date.parse(event.start);
+    return Number.isFinite(time) && time >= now && time <= horizon;
+  });
+}
+function eventPoint(event) {
+  if (Number.isFinite(event.lat) && Number.isFinite(event.lon)) return { lat: event.lat, lon: event.lon };
+  return cityPoint(event.city) || cityPoint(event.venue);
+}
+function eventPlaces() {
+  return upcomingEvents().map(event => {
+    const point = eventPoint(event);
+    if (!point) return null;
+    const km = haversine(state.lat, state.lon, point.lat, point.lon);
+    if (km > state.radius + 0.4) return null;
+    return {
+      id: 'event:' + event.url,
+      kind: 'event',
+      name: event.title,
+      cat: 'parties',
+      catLabel: 'מסיבות ואירועים',
+      emoji: '🎉',
+      color: '#9a3d6a',
+      lat: point.lat,
+      lon: point.lon,
+      hours: formatEventWhen(event.start),
+      address: [event.venue, event.city].filter(Boolean).join(' · '),
+      setting: 'in',
+      budget: 'mid',
+      note: event.price ? 'מחיר לפי המקור: ' + event.price : '',
+      url: event.url,
+      source: event.source,
+      km,
+      distanceText: formatDistance(km)
+    };
+  }).filter(Boolean);
+}
+function elamaayanSearch(name) {
+  return 'https://www.google.com/search?q=' + encodeURIComponent('site:www.elamaayan.com ' + name);
+}
+async function loadEvents() {
+  try {
+    const response = await fetch('./data/events.json?v=3', { cache: 'no-cache' });
+    if (!response.ok) return;
+    const data = await response.json();
+    if (data && Array.isArray(data.events)) EVENT_DATA = data;
+  } catch (err) { /* the list explains that the file is missing */ }
+  const stamp = $('eventsUpdated');
+  if (!stamp) return;
+  stamp.textContent = EVENT_DATA.updatedAt ? 'עודכן ' + formatUpdated(EVENT_DATA.updatedAt) : 'אין עדיין קובץ אירועים';
 }
 
 function homePool() {
@@ -731,9 +866,10 @@ function shareText(place) {
   if (state.people) bits.push(peoplePhrase(state.people));
   lines.push(bits.join(' · '));
   if (place.note) lines.push(place.note);
-  if (place.kind === 'place' && Number.isFinite(place.lat)) {
+  if (place.kind !== 'home' && Number.isFinite(place.lat)) {
     lines.push('https://www.google.com/maps/search/?api=1&query=' + place.lat.toFixed(5) + ',' + place.lon.toFixed(5));
   }
+  if (place.url) lines.push(place.url);
   lines.push('מי בא?');
   return lines.join('\n');
 }
@@ -744,14 +880,24 @@ function wazeUrl(place) {
   return 'https://waze.com/ul?ll=' + place.lat.toFixed(5) + ',' + place.lon.toFixed(5) + '&navigate=yes&q=' + encodeURIComponent(place.name);
 }
 
+function linkOut(label, href) {
+  const anchor = document.createElement('a');
+  anchor.href = href;
+  anchor.target = '_blank';
+  anchor.rel = 'noopener';
+  anchor.textContent = label;
+  return anchor;
+}
 function closeSheets() {
   $('backdrop').hidden = true;
   $('resultSheet').hidden = true;
   $('favSheet').hidden = true;
+  $('partySheet').hidden = true;
 }
 function openSheet(node) {
   $('resultSheet').hidden = true;
   $('favSheet').hidden = true;
+  $('partySheet').hidden = true;
   $('backdrop').hidden = false;
   node.hidden = false;
 }
@@ -767,14 +913,14 @@ function renderResult(place, notice) {
   const kicker = document.createElement('p');
   kicker.className = 'kicker';
   kicker.id = 'resultKicker';
-  kicker.textContent = place.kind === 'place' ? 'ההצעה להערב' : 'נשארים בבית';
+  kicker.textContent = place.kind === 'event' ? 'מסיבה או אירוע' : (place.cat === 'hikes' ? 'טיול או מעיין' : (place.kind === 'place' ? 'ההצעה להערב' : 'נשארים בבית'));
   const title = document.createElement('h2');
   title.className = 'place-name';
   title.id = 'resultName';
   title.textContent = place.name;
   const meta = document.createElement('div');
   meta.className = 'meta';
-  [place.emoji + ' ' + place.catLabel, place.distanceText, SETTING_LABEL[place.setting], BUDGET_LABEL[place.budget]]
+  [place.emoji + ' ' + place.catLabel, place.distanceText, place.kind === 'event' ? '' : SETTING_LABEL[place.setting], place.kind === 'event' ? '' : BUDGET_LABEL[place.budget]]
     .filter(Boolean)
     .forEach(text => {
       const pill = document.createElement('span');
@@ -792,7 +938,7 @@ function renderResult(place, notice) {
   if (place.hours) {
     const hours = document.createElement('p');
     hours.className = 'hours';
-    hours.textContent = 'שעות: ' + place.hours;
+    hours.textContent = (place.kind === 'event' ? 'מתי: ' : 'שעות: ') + place.hours;
     sheet.append(hours);
   }
   if (place.note) {
@@ -809,7 +955,7 @@ function renderResult(place, notice) {
   }
   const actions = document.createElement('div');
   actions.className = 'actions';
-  if (place.kind === 'place') {
+  if (Number.isFinite(place.lat) && place.kind !== 'home') {
     const waze = document.createElement('a');
     waze.href = wazeUrl(place);
     waze.target = '_blank';
@@ -823,6 +969,30 @@ function renderResult(place, notice) {
     maps.className = 'line';
     maps.textContent = 'Google Maps';
     actions.append(waze, maps);
+  }
+  if (place.kind === 'event' && place.url) {
+    const tickets = document.createElement('a');
+    tickets.href = place.url;
+    tickets.target = '_blank';
+    tickets.rel = 'noopener';
+    tickets.className = 'solid wide';
+    tickets.textContent = 'לכרטיסים';
+    actions.append(tickets);
+  }
+  if (place.cat === 'hikes') {
+    const trails = document.createElement('a');
+    trails.href = elamaayanSearch(place.name);
+    trails.target = '_blank';
+    trails.rel = 'noopener';
+    trails.className = 'line wide';
+    trails.textContent = 'מסלולים באל המעיין';
+    actions.append(trails);
+    const extra = document.createElement('p');
+    extra.className = 'notice';
+    extra.append(linkOut('האתר', 'https://www.elamaayan.com/'), document.createTextNode(' · '));
+    extra.append(linkOut('App Store', 'https://apps.apple.com/il/app/id6803943761'), document.createTextNode(' · '));
+    extra.append(linkOut('Google Play', 'https://play.google.com/store/apps/details?id=com.elahamaayan.app'));
+    sheet.append(extra);
   }
   const again = document.createElement('button');
   again.type = 'button';
@@ -936,6 +1106,10 @@ function renderChips() {
     });
     wrap.append(button);
   });
+  updateHints();
+}
+function updateHints() {
+  $('hikeRadius').hidden = !state.categories.has('hikes');
 }
 function renderPeople() {
   $('peopleVal').textContent = state.people ? peoplePhrase(state.people) : 'לא משנה';
@@ -1067,19 +1241,23 @@ async function spin(force) {
   let notice = '';
   try {
     let places = [];
-    if (cats.length) {
-      const loaded = await gatherPlaces(cats, force === true);
+    const osmCats = cats.filter(cat => !cat.local && cat.filters.length);
+    if (osmCats.length) {
+      const loaded = await gatherPlaces(osmCats, force === true);
       places = loaded.places;
       notice = loaded.notice;
       if (loaded.source === 'cache') setStatus('מסובבים לפי מקומות שנשמרו…');
-    } else {
+    } else if (!state.categories.has('parties')) {
       setStatus('מסובבים בין הרעיונות…');
     }
+    if (state.categories.has('parties')) places = places.concat(eventPlaces());
     let pool = places;
     if (state.home) pool = pool.concat(homePool());
     if (!pool.length) {
       state.needsRetry = true;
-      setStatus('לא מצאנו מקום כרגע. לחצו על «נסו שוב».', 'error');
+      setStatus(state.categories.has('parties')
+        ? 'אין מסיבות ברדיוס הזה. פתחו את «כל המסיבות השבוע».'
+        : 'לא מצאנו מקום כרגע. לחצו על «נסו שוב».', 'error');
       return;
     }
     const filtered = applySetting(pool);
@@ -1106,7 +1284,68 @@ async function spin(force) {
   }
 }
 
+function renderPartyList() {
+  const sheet = $('partySheet');
+  sheet.replaceChildren();
+  const handle = document.createElement('div');
+  handle.className = 'handle';
+  const head = document.createElement('div');
+  head.className = 'sheet-head';
+  const title = document.createElement('h2');
+  title.id = 'partyTitle';
+  title.textContent = 'כל המסיבות השבוע';
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'linkish';
+  close.textContent = 'סגירה';
+  close.addEventListener('click', closeSheets);
+  head.append(title, close);
+  sheet.append(handle, head);
+  const stamp = document.createElement('p');
+  stamp.className = 'notice';
+  stamp.textContent = EVENT_DATA.updatedAt ? 'עודכן ' + formatUpdated(EVENT_DATA.updatedAt) : 'עדיין אין עדכון.';
+  sheet.append(stamp);
+  const list = upcomingEvents().sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+  if (!list.length) {
+    const empty = document.createElement('p');
+    empty.className = 'fav-empty';
+    empty.textContent = 'אין כרגע מסיבות שמורות לשבוע הקרוב. אפשר לחפש ישירות באתרים:';
+    sheet.append(empty);
+    const links = document.createElement('div');
+    links.className = 'actions';
+    EVENT_LINKS.forEach(([label, href]) => {
+      const anchor = linkOut(label, href);
+      anchor.className = 'line';
+      links.append(anchor);
+    });
+    sheet.append(links);
+  }
+  list.forEach(event => {
+    const row = document.createElement('a');
+    row.className = 'fav-row';
+    row.href = event.url;
+    row.target = '_blank';
+    row.rel = 'noopener';
+    const grow = document.createElement('div');
+    grow.className = 'grow';
+    const name = document.createElement('strong');
+    name.textContent = event.title;
+    const sub = document.createElement('span');
+    sub.textContent = [formatEventWhen(event.start), event.venue, event.city, event.price || ''].filter(Boolean).join(' · ');
+    grow.append(name, sub);
+    row.append(grow);
+    sheet.append(row);
+  });
+  openSheet(sheet);
+}
 function bind() {
+  $('partyListBtn').addEventListener('click', renderPartyList);
+  $('hikeRadius').addEventListener('click', () => {
+    state.radius = 80;
+    saveSettings();
+    renderLocation();
+    setStatus('רדיוס הטיולים הורחב ל-80 ק״מ. אפשר עד 100.');
+  });
   $('retryBtn').addEventListener('click', () => {
     if (state.phase === 'fetch') {
       abortSpinFetch();
@@ -1222,6 +1461,7 @@ renderSeg('setting', state.setting);
 renderIdeas();
 saveFavorites(favorites());
 showPlaceholder();
+loadEvents();
 maybeInstallHint();
 registerSw();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => drawWheel(view.slices));

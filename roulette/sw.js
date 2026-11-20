@@ -1,10 +1,11 @@
-const CACHE = 'roulette-v2';
+const CACHE = 'roulette-v3';
 const SHELL = [
   './',
   './index.html',
-  './styles.css?v=2',
-  './app.js?v=2',
-  './fallback-places.js?v=2',
+  './styles.css?v=3',
+  './app.js?v=3',
+  './fallback-places.js?v=3',
+  './data/events.json?v=3',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',

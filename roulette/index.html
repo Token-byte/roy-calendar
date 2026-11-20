@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=2">
+<link rel="stylesheet" href="styles.css?v=3">
 </head>
 <body>
 <div class="app">
@@ -48,13 +48,18 @@
       <span>רדיוס</span>
       <strong id="radiusLabel">5 ק״מ</strong>
     </div>
-    <input id="radius" type="range" min="1" max="30" value="5" step="1" aria-label="רדיוס החיפוש בקילומטרים">
-    <div class="range-ends"><span>1 ק״מ</span><span>30 ק״מ</span></div>
+    <input id="radius" type="range" min="1" max="100" value="5" step="1" aria-label="רדיוס החיפוש בקילומטרים">
+    <div class="range-ends"><span>1 ק״מ</span><span>100 ק״מ</span></div>
+    <button type="button" class="ghost hike-radius" id="hikeRadius" hidden>לטיולים ומעיינות: הרחיבו ל-80 ק״מ</button>
   </section>
 
   <section class="block" aria-label="קטגוריות">
     <h2>מה בא לכם</h2>
     <div class="chips" id="cats"></div>
+    <div class="party-bar">
+      <button type="button" id="partyListBtn">כל המסיבות השבוע</button>
+      <span id="eventsUpdated"></span>
+    </div>
   </section>
 
   <details class="card more" id="more">
@@ -135,11 +140,12 @@
 <div class="backdrop" id="backdrop" hidden></div>
 <section class="sheet" id="resultSheet" hidden aria-labelledby="resultKicker"></section>
 <section class="sheet" id="favSheet" hidden aria-labelledby="favTitle"></section>
+<section class="sheet" id="partySheet" hidden aria-labelledby="partyTitle"></section>
 
 <noscript>
   <p class="noscript">כדי לסובב את הרולטה צריך להפעיל JavaScript.</p>
 </noscript>
-<script src="fallback-places.js?v=2"></script>
-<script src="app.js?v=2"></script>
+<script src="fallback-places.js?v=3"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>
