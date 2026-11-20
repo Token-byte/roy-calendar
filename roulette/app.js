@@ -109,7 +109,7 @@ const state = {
   gpsAt: 0
 };
 
-const view = { rotation: 0, slices: [], spun: false, anim: 0 };
+const view = { rotation: 0, slices: [], spun: false, anim: 0, spinningFast: false };
 
 function readJSON(key, fallback) {
   try {
@@ -568,7 +568,7 @@ function elamaayanSearch(name) {
 }
 async function loadEvents() {
   try {
-    const response = await fetch('./data/events.json?v=3', { cache: 'no-cache' });
+    const response = await fetch('./data/events.json?v=4', { cache: 'no-cache' });
     if (!response.ok) return;
     const data = await response.json();
     if (data && Array.isArray(data.events)) EVENT_DATA = data;
@@ -758,37 +758,82 @@ function sliceAtPointer(rotation, count) {
   if (angle < 0) angle += Math.PI * 2;
   return Math.floor(angle / arc) % count;
 }
-function spinTarget(index, count) {
-  const arc = Math.PI * 2 / count;
-  const jitter = (Math.random() - 0.5) * arc * 0.5;
-  let target = ((-(index + 0.5) * arc + jitter) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
-  const current = ((view.rotation % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-  let delta = target - current;
-  if (delta < 0) delta += Math.PI * 2;
-  delta += Math.PI * 2 * (reduceMotion ? 0 : 5);
-  return view.rotation + delta;
+const STATUS_LINES = [
+  'מחפשים מקומות בסביבה…',
+  'בודקים מה פתוח…',
+  'מריחים לאן הרוח…',
+  'כמעט…'
+];
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
-function animateTo(target, slices, winner) {
+function hapticTap() {
+  if (reduceMotion || !navigator.vibrate) return;
+  try { navigator.vibrate(18); } catch (err) { /* some browsers block vibration */ }
+}
+function startFastSpin() {
   cancelAnimationFrame(view.anim);
+  if (!view.slices.length) view.slices = placeholderSlices();
+  view.spinningFast = true;
+  $('hubKicker').textContent = 'הערב';
+  $('hubName').textContent = 'רגע';
+  if (reduceMotion) {
+    drawWheel(view.slices);
+    return;
+  }
+  let last = performance.now();
+  const step = (now) => {
+    if (!view.spinningFast) return;
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    view.rotation += 8.5 * dt;
+    drawWheel(view.slices);
+    view.anim = requestAnimationFrame(step);
+  };
+  view.anim = requestAnimationFrame(step);
+}
+function stopFastSpin() {
+  view.spinningFast = false;
+  cancelAnimationFrame(view.anim);
+}
+function startStatusCycle() {
+  let index = 0;
+  setStatus(STATUS_LINES[0], 'live');
+  if (reduceMotion) return () => {};
+  const timer = setInterval(() => {
+    index = (index + 1) % STATUS_LINES.length;
+    setStatus(STATUS_LINES[index], 'live');
+  }, 750);
+  return () => clearInterval(timer);
+}
+function decelerateTo(index, slices, winner) {
+  stopFastSpin();
+  view.slices = slices;
+  const count = Math.max(slices.length, 1);
+  const arc = Math.PI * 2 / count;
+  const jitter = reduceMotion ? 0 : (Math.random() - 0.5) * arc * 0.35;
+  const targetMod = ((-(index + 0.5) * arc + jitter) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+  const current = ((view.rotation % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  let delta = targetMod - current;
+  if (delta < 0.15) delta += Math.PI * 2;
+  if (!reduceMotion) delta += Math.PI * 2;
   const from = view.rotation;
+  const to = from + delta;
+  const duration = reduceMotion ? 180 : 1300;
   const started = performance.now();
-  const duration = reduceMotion ? 350 : 4600;
-  let lastHub = 0;
   return new Promise(resolve => {
     const step = (now) => {
       const t = Math.min(1, (now - started) / duration);
-      const eased = 1 - Math.pow(1 - t, 4);
-      view.rotation = from + (target - from) * eased;
+      const eased = 1 - Math.pow(1 - t, 3);
+      view.rotation = from + (to - from) * eased;
       drawWheel(slices);
-      const idx = sliceAtPointer(view.rotation, slices.length);
-      if (now - lastHub > 90 || t > 0.86) {
-        $('hubKicker').textContent = slices[idx].catLabel || 'הערב';
-        $('hubName').textContent = slices[idx].name;
-        lastHub = now;
-      }
+      const under = slices[sliceAtPointer(view.rotation, count)] || winner;
+      $('hubKicker').textContent = t > 0.62 ? (winner.catLabel || 'הערב') : (under.catLabel || 'הערב');
+      $('hubName').textContent = t > 0.62 ? winner.name : (under.name || 'רגע');
       if (t < 1) view.anim = requestAnimationFrame(step);
       else {
-        $('hubKicker').textContent = winner.catLabel;
+        $('hubKicker').textContent = winner.catLabel || 'הערב';
         $('hubName').textContent = winner.name;
         resolve();
       }
@@ -1200,10 +1245,6 @@ async function gatherPlaces(cats, force) {
   }
   state.phase = 'fetch';
   showRetry(true);
-  setStatus('מחפשים מקומות אמיתיים בסביבה…');
-  const slowNote = setTimeout(() => {
-    if (state.phase === 'fetch') setStatus('השרת עמוס, מנסים כתובת אחרת…');
-  }, 1800);
   try {
     const places = withDistance(await raceOverpass(cats, true));
     if (!places.length) throw new Error('empty');
@@ -1221,7 +1262,6 @@ async function gatherPlaces(cats, force) {
     }
     return { places: [], source: 'empty', notice: '' };
   } finally {
-    clearTimeout(slowNote);
     state.phase = '';
   }
 }
@@ -1236,25 +1276,31 @@ async function spin(force) {
   }
   state.spinning = true;
   closeSheets();
+  hapticTap();
   $('wheel').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
-  setSpinBusy(true, 'מחפשים…');
+  setSpinBusy(true, 'מסתובב…');
+  showRetry(true);
+  startFastSpin();
+  const stopStatus = startStatusCycle();
+  const started = performance.now();
   let notice = '';
   try {
     let places = [];
     const osmCats = cats.filter(cat => !cat.local && cat.filters.length);
-    if (osmCats.length) {
-      const loaded = await gatherPlaces(osmCats, force === true);
-      places = loaded.places;
-      notice = loaded.notice;
-      if (loaded.source === 'cache') setStatus('מסובבים לפי מקומות שנשמרו…');
-    } else if (!state.categories.has('parties')) {
-      setStatus('מסובבים בין הרעיונות…');
-    }
+    const loaded = osmCats.length
+      ? await gatherPlaces(osmCats, force === true)
+      : { places: [], source: 'ideas', notice: '' };
+    places = loaded.places;
+    notice = loaded.notice;
     if (state.categories.has('parties')) places = places.concat(eventPlaces());
     let pool = places;
     if (state.home) pool = pool.concat(homePool());
+    const elapsed = performance.now() - started;
+    if (elapsed < (reduceMotion ? 0 : 1500)) await wait((reduceMotion ? 0 : 1500) - elapsed);
+    stopStatus();
     if (!pool.length) {
       state.needsRetry = true;
+      await decelerateTo(0, view.slices.length ? view.slices : placeholderSlices(), { name: 'עוד פעם', catLabel: 'הערב' });
       setStatus(state.categories.has('parties')
         ? 'אין מסיבות ברדיוס הזה. פתחו את «כל המסיבות השבוע».'
         : 'לא מצאנו מקום כרגע. לחצו על «נסו שוב».', 'error');
@@ -1268,15 +1314,19 @@ async function spin(force) {
     const winner = weightedPick(candidates);
     pushRecent(winner.id);
     const arranged = buildSlices(filtered.pool, winner);
-    view.slices = arranged.slices;
     view.spun = true;
-    setStatus(places.length ? 'נמצאו ' + placeCountLabel(places.length) + '. מסובבים…' : 'מסובבים…');
     showRetry(false);
-    setSpinBusy(true, 'מסתובב…');
-    await animateTo(spinTarget(arranged.index, arranged.slices.length), arranged.slices, winner);
+    await decelerateTo(arranged.index, arranged.slices, winner);
     setStatus('');
     renderResult(winner, notice);
+  } catch (err) {
+    stopStatus();
+    state.needsRetry = true;
+    await decelerateTo(0, view.slices.length ? view.slices : placeholderSlices(), { name: 'עוד פעם', catLabel: 'הערב' });
+    setStatus('משהו השתבש בסיבוב. לחצו על «נסו שוב».', 'error');
   } finally {
+    stopStatus();
+    stopFastSpin();
     state.spinning = false;
     state.phase = '';
     setSpinBusy(false);

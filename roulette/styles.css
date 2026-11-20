@@ -183,12 +183,12 @@ input[type="range"] {
 }
 .party-bar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
   margin-top: 10px;
 }
-.party-bar button, .hike-radius {
+.hike-radius {
   border: 1px solid var(--line);
   background: #fff;
   border-radius: 999px;
@@ -196,8 +196,34 @@ input[type="range"] {
   padding: 0 12px;
   font-weight: 650;
 }
+.party-btn {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  min-height: 46px;
+  padding: 0 16px;
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: .01em;
+  background: linear-gradient(105deg, #1d4ed8 0%, #5b21b6 48%, #7c3aed 78%, #2563eb 100%);
+  background-size: 180% 100%;
+  box-shadow: 0 8px 22px rgba(76, 40, 190, .38), 0 0 0 1px rgba(255, 255, 255, .18) inset;
+  animation: partyShift 5.5s ease-in-out infinite;
+}
+.party-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 32%, rgba(255, 255, 255, .42) 50%, transparent 68%);
+  transform: translateX(-130%);
+  animation: partyShimmer 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
 .hike-radius { width: 100%; margin-top: 8px; }
-#eventsUpdated { color: var(--muted); font-size: 12px; }
+#eventsUpdated { color: var(--muted); font-size: 12px; text-align: center; }
 
 .more summary {
   font-weight: 600;
@@ -355,6 +381,7 @@ input[type="range"] {
   color: var(--muted);
   font-size: 14px;
 }
+.status.live { color: var(--ink); font-weight: 600; animation: statusPulse 1.15s ease-in-out infinite; }
 .status.error { color: #8a3144; }
 .retry {
   width: 100%;
@@ -511,7 +538,17 @@ input[type="range"] {
   padding: 0 4px;
 }
 
+@keyframes partyShift {
+  50% { background-position: 100% 0; }
+}
+@keyframes partyShimmer {
+  0%, 55% { transform: translateX(-130%); }
+  100% { transform: translateX(130%); }
+}
+@keyframes statusPulse {
+  50% { opacity: .55; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .spinner { animation: none; }
+  .spinner, .party-btn, .party-btn::after, .status.live { animation: none; }
   .sheet { scroll-behavior: auto; }
 }
