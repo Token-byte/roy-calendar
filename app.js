@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '2.3.2';
+const VERSION = '2.3.3';
 const CFG = window.APP_CONFIG || {};
 const TZ = CFG.TIME_ZONE || 'Asia/Jerusalem';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly';
@@ -31,7 +31,20 @@ const S = {
   syncing: false,
 };
 S.cursor = firstOfMonth(S.sel);
-function saveEvents(){ LS.set('events', S.events); }
+function saveEvents(){
+  LS.set('events', S.events);
+  LS.set('eventsBackup', S.events);
+}
+function restoreEventsIfEmpty(){
+  let raw = null;
+  try { raw = localStorage.getItem('events'); } catch (e) { return; }
+  if (raw != null) return;
+  const bak = LS.get('eventsBackup', null);
+  if (!bak || typeof bak !== 'object' || !Object.keys(bak).length) return;
+  S.events = bak;
+  LS.set('events', S.events);
+}
+restoreEventsIfEmpty();
 function saveOps(){ LS.set('ops', S.ops); }
 function saveSettings(){ LS.set('settings', S.settings); }
 
@@ -247,8 +260,11 @@ async function fetchRange(fromKey, toKey){
       items = items.concat(j.items || []); pageToken = j.nextPageToken || '';
     } while (pageToken);
     const a = Date.parse(timeMin), b = Date.parse(timeMax);
+    const stillPending = new Set(S.ops.map(o => o.id));
+    pendingIds.forEach(id => stillPending.add(id));
     for (const [id, ev] of Object.entries(S.events)){
-      if (ev.calId === cal.id && !pendingIds.has(id) && evStartMs(ev) < b && evEndMs(ev) > a) delete S.events[id];
+      if (shouldPreserveEvent(id, ev, stillPending)) continue;
+      if (ev.calId === cal.id && evStartMs(ev) < b && evEndMs(ev) > a) delete S.events[id];
     }
     for (const g of items){
       if (g.status === 'cancelled' || pendingIds.has(g.id)) continue;
@@ -291,6 +307,7 @@ async function sync(opts = {}){
   S.syncing = true; 
   try {
     if (!S.calendars.length || opts.calendars || Date.now() - lastFullSync > 30*60000){ await loadCalendars(); lastFullSync = Date.now(); }
+    enqueueUnsynced();
     await flushOps();
     let from, to;
     if (opts.from && opts.to){ from = opts.from; to = opts.to; }
@@ -303,6 +320,7 @@ async function sync(opts = {}){
       to = addMonths(S.cursor, 3);
     }
     await fetchRange(from, to);
+    if (S.ops.length){ enqueueUnsynced(); await flushOps(); }
     LS.set('lastSync', Date.now());
   } catch(e){
     console.warn('sync', e);
@@ -310,6 +328,18 @@ async function sync(opts = {}){
   } finally {
     S.syncing = false; render(); scheduleNotifications();
   }
+}
+function enqueueUnsynced(){
+  let changed = false;
+  for (const [id, ev] of Object.entries(S.events)){
+    if (!ev || ev.deleted || ev.readOnly) continue;
+    const local = String(id).indexOf('local-') === 0 || !ev.calId || ev.calId === 'local';
+    if (!local) continue;
+    if (S.ops.some(o => o.id === id)) continue;
+    S.ops.push({ kind: 'create', id: id, calId: ev.calId || 'local' });
+    changed = true;
+  }
+  if (changed) saveOps();
 }
 function setEventCategory(id, catId){
   const ev = S.events[id];
@@ -541,7 +571,7 @@ function saveEditor(e){
   const title = $('edTitle').value.trim(); if (!title) return;
   const allDay = $('edAllDay').checked, date = $('edDate').value;
   let endDate = $('edEndDate').value || date; if (endDate < date) endDate = date;
-  const ev = editing || { id: 'local-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6), calId: S.connected ? primaryCalId() : 'local' };
+  const ev = editing || { id: 'local-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6), calId: 'local' };
   ev.title = title; ev.allDay = allDay; ev.location = $('edLocation').value.trim(); ev.notes = $('edNotes').value;
   ev.reminder = Number($('edReminder').value); ev.cat = edCat || null;
   if (allDay){ ev.start = date; ev.end = addDays(endDate, 1); }
@@ -557,7 +587,7 @@ function saveEditor(e){
   S.sel = allDay ? date : keyOf(new Date(ev.start)); S.cursor = S.view === 'month' ? firstOfMonth(S.sel) : S.cursor;
   closeEditor(); render(); scheduleNotifications();
   if (S.connected) sync().then(() => { if (!S.ops.length) toast('נשמר בגוגל קלנדר'); });
-  else toast('נשמר');
+  else toast('נשמר רק במכשיר הזה. בלי גוגל הוא לא עובר לטלפון אחר');
 }
 function deleteEditing(){
   if (!editing) return;

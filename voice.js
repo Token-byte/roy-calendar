@@ -54,7 +54,7 @@ function createFromPhrase(text){
   if (!parsed.title){ toast('לא הבנתי את המשפט'); return; }
   const ev = {
     id: 'local-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    calId: S.connected ? primaryCalId() : 'local',
+    calId: 'local',
     title: parsed.title,
     allDay: parsed.allDay,
     location: '',
