@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-20T23:40:33.913384+02:00",
+  "updatedAt": "2026-11-21T13:55:35.005092+02:00",
   "sources": [
     {
       "id": "makore",
@@ -39,17 +39,6 @@
     }
   ],
   "events": [
-    {
-      "title": "CHEERS! WINE FESTIVAL & SUNSET PARTY",
-      "start": "2026-11-21T12:00:00Z",
-      "venue": "שלוותה נמל תל אביב, התערוכה, תל אביב-יפו, ישראל",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/c8677259ac2c09a5a1d2474a6015f5aee4657fc51709380089098fd21edf040d",
-      "source": "makore",
-      "price": null
-    },
     {
       "title": "MEGA AFTERNOON PARTY! הוותיקים חוזרים לאומן 17 ת\"א ⚡️💪 מסיבת ענק בשתי רחבות!",
       "start": "2026-11-21T15:00:00Z",
@@ -335,6 +324,17 @@
       "url": "https://www.makore.co.il/event/0117dd6d4a4e25d0aa2fb1b961279234af51f44e8eded332ca7b583e0cbf8289",
       "source": "makore",
       "price": null
+    },
+    {
+      "title": "חיי לילה בתל אביב: סבב ברים מטורף עם תיירים מכל העולם",
+      "start": "2026-11-27T20:00:00Z",
+      "venue": "יהודה הלוי, תל אביב-יפו",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/027f228bd5c16310b4d06d46353a8c7d4dd4f8930b40471e1f23815a6ec456ed",
+      "source": "makore",
+      "price": "מבוגר: ₪85"
     },
     {
       "title": "אירוע חנוכה - תהלוכה מסורתית ומסיבת אזניות בבית ספר המנחיל",
