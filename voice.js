@@ -27,7 +27,9 @@ function showVoiceConfirm(ev, parsed){
   clearTimeout(voiceTimer);
   voiceUndo = ev.id;
   $('vcTitle').textContent = ev.title;
-  $('vcWhen').textContent = describeParsed(parsed) + (S.connected ? '' : ' · נשמר במכשיר');
+  const onGoogle = S.connected && tokenValid();
+  $('vcWhen').textContent = describeParsed(parsed) + (onGoogle ? '' : ' · נשמר רק במכשיר, לא בגוגל');
+  if ($('vcConnect')) $('vcConnect').classList.toggle('hidden', onGoogle);
   $('voiceConfirm').classList.remove('hidden');
   voiceTimer = setTimeout(() => {
     $('voiceConfirm').classList.add('hidden');

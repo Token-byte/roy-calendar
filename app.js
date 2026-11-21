@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '2.3.3';
+const VERSION = '2.3.4';
 const CFG = window.APP_CONFIG || {};
 const TZ = CFG.TIME_ZONE || 'Asia/Jerusalem';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly';
@@ -172,7 +172,8 @@ function toGoogle(ev){
     end: ev.allDay ? { date: ev.end } : { dateTime: new Date(ev.end).toISOString(), timeZone: TZ },
   };
   const cat = catOfEvent(ev);
-  if (S.settings.gColor && cat) body.colorId = cat.g || nearestGColor(cat.color);
+  if (!ev.cat && cat) ev.cat = cat.id;
+  if (cat) body.colorId = String(cat.g || nearestGColor(cat.color));
   if (ev.rrule) body.recurrence = ['RRULE:' + String(ev.rrule).replace(/^RRULE:/, '')];
   body.extendedProperties = { private: { royCat: ev.cat || '' } };
   const overrides = [];
@@ -245,6 +246,8 @@ async function loadCalendars(){
     selected: prev[c.id] ? prev[c.id].selected !== false : (c.selected !== false)
   })).sort((a,b) => (b.primary - a.primary));
   LS.set('calendars', S.calendars);
+  const primary = S.calendars.find(c => c.primary);
+  if (primary && primary.id) LS.set('gaccount', primary.id);
 }
 function primaryCalId(){ const p = S.calendars.find(c => c.primary); return p ? p.id : 'primary'; }
 async function fetchRange(fromKey, toKey){
@@ -299,6 +302,15 @@ async function flushOps(){
   }
 }
 let lastFullSync = 0;
+let syncRetries = 0;
+function localNoteCount(){
+  let n = 0;
+  for (const [id, ev] of Object.entries(S.events)) if (isLocalOnlyEvent(id, ev)) n++;
+  return n;
+}
+function accountLabel(){
+  return LS.get('gaccount', '') || CFG.LOGIN_HINT || 'החשבון בגוגל';
+}
 async function sync(opts = {}){
   if (!S.connected || !clientId()) { renderBanner(); return; }
   if (!navigator.onLine){ renderBanner(); return; }
@@ -322,9 +334,14 @@ async function sync(opts = {}){
     await fetchRange(from, to);
     if (S.ops.length){ enqueueUnsynced(); await flushOps(); }
     LS.set('lastSync', Date.now());
+    syncRetries = 0;
   } catch(e){
     console.warn('sync', e);
     if (e.code !== 401) toast('שגיאת סנכרון: ' + e.message);
+    if (S.ops.length && syncRetries < 3 && e.code !== 401){
+      syncRetries++;
+      setTimeout(() => sync(), 15000);
+    }
   } finally {
     S.syncing = false; render(); scheduleNotifications();
   }
@@ -332,9 +349,7 @@ async function sync(opts = {}){
 function enqueueUnsynced(){
   let changed = false;
   for (const [id, ev] of Object.entries(S.events)){
-    if (!ev || ev.deleted || ev.readOnly) continue;
-    const local = String(id).indexOf('local-') === 0 || !ev.calId || ev.calId === 'local';
-    if (!local) continue;
+    if (!isLocalOnlyEvent(id, ev)) continue;
     if (S.ops.some(o => o.id === id)) continue;
     S.ops.push({ kind: 'create', id: id, calId: ev.calId || 'local' });
     changed = true;
@@ -352,7 +367,8 @@ function setEventCategory(id, catId){
   queue('update', ev);
   render();
   scheduleNotifications();
-  if (S.connected) sync();
+  settleChange(ev.id);
+  if (!(S.connected && tokenValid())) toast('הקטגוריה נשמרה במכשיר ותיכתב לגוגל אחרי ההתחברות');
 }
 function queue(kind, ev){
   if (kind === 'update' && S.ops.some(o => o.id === ev.id && o.kind === 'create')) { saveOps(); return; }
@@ -494,15 +510,22 @@ function renderList(){
 function renderBanner(){
   const b = $('banner');
   let msg = '', action = '', fn = null;
-  if (!navigator.onLine){ msg = 'אין חיבור לאינטרנט. השינויים יישמרו ויסונכרנו אחר כך.'; }
-  else if (!clientId() || !S.connected){ if (!LS.get('bannerDismissed', false)){ msg = 'לחבר את גוגל קלנדר?'; action = 'חיבור'; fn = openGoogle; } }
-  else if (!tokenValid()){ msg = 'החיבור לגוגל פג.' + (S.ops.length ? ` ${S.ops.length} שינויים ממתינים.` : ''); action = 'חיבור מחדש'; fn = () => connect(''); }
+  const who = CFG.LOGIN_HINT || 'רוי';
+  if (!navigator.onLine){ msg = 'אין אינטרנט. השינויים נשמרים במכשיר ויישלחו לגוגל כשיחזור החיבור.'; }
+  else if (!clientId() || !S.connected){
+    msg = 'הפתקים נשמרים רק במכשיר הזה. הם לא בגוגל (' + who + ') ולא עוברים לטלפון או למק אחר.';
+    action = 'התחברות'; fn = () => connectInteractive();
+  } else if (!tokenValid()){
+    msg = 'החיבור לגוגל פג. פתקים חדשים מחכים במכשיר עד חיבור מחדש.';
+    action = 'חיבור מחדש'; fn = () => connectInteractive();
+  } else if (S.ops.length){
+    msg = 'יש ' + S.ops.length + ' שינויים שעדיין לא נכתבו לגוגל. הם יישלחו שוב אוטומטית.';
+    action = 'שליחה'; fn = () => sync({ calendars: true });
+  }
   if (!msg){ b.classList.add('hidden'); return; }
-  const closable = action === 'חיבור';
-  b.innerHTML = `<span>${esc(msg)}</span><span>${action ? `<button id="bannerBtn">${esc(action)}</button>` : ''}${closable ? '<button id="bannerX" class="banner-x" aria-label="סגירה">✕</button>' : ''}</span>`;
+  b.innerHTML = `<span>${esc(msg)}</span>${action ? `<button id="bannerBtn">${esc(action)}</button>` : ''}`;
   b.classList.remove('hidden');
   if (fn) $('bannerBtn').onclick = fn;
-  if (closable) $('bannerX').onclick = () => { LS.set('bannerDismissed', true); renderBanner(); };
 }
 let toastT;
 function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.add('hidden'), 2600); }
@@ -556,6 +579,8 @@ function openEditor(ev, presetKey, presetHour){
   edCat = ev ? (ev.cat || null) : null;
   renderEdCats();
   toggleTimes();
+  const warn = $('edGoogleWarn');
+  if (warn) warn.classList.toggle('hidden', !!(S.connected && tokenValid()));
   $('editorBackdrop').classList.remove('hidden');
   if (!ev) setTimeout(() => $('edTitle').focus(), 250);
 }
@@ -586,8 +611,7 @@ function saveEditor(e){
   queue(editing ? 'update' : 'create', ev);
   S.sel = allDay ? date : keyOf(new Date(ev.start)); S.cursor = S.view === 'month' ? firstOfMonth(S.sel) : S.cursor;
   closeEditor(); render(); scheduleNotifications();
-  if (S.connected) sync().then(() => { if (!S.ops.length) toast('נשמר בגוגל קלנדר'); });
-  else toast('נשמר רק במכשיר הזה. בלי גוגל הוא לא עובר לטלפון אחר');
+  settleChange(ev.id, true);
 }
 function deleteEditing(){
   if (!editing) return;
@@ -597,7 +621,7 @@ function deleteEditing(){
   queue('delete', ev);
   delete S.events[ev.id]; saveEvents();
   closeEditor(); render(); scheduleNotifications();
-  if (S.connected) sync();
+  settleChange(ev.id);
 }
 
 /* ---------- notifications ---------- */
@@ -679,11 +703,84 @@ function renderThemes(){
     `<button type="button" data-theme="${id}" class="${id === cur ? 'on' : ''}" style="--sw:${t.wrap};--sw2:${t.wkend}"><i></i><span>${t.name}</span></button>`
   ).join('');
 }
+function settleChange(id, saved){
+  if (S.connected && tokenValid()){
+    sync().then(() => {
+      if (!saved) return;
+      toast(S.ops.length ? 'נשמר במכשיר ויישלח לגוגל שוב' : 'נשמר בגוגל קלנדר');
+    });
+    return;
+  }
+  if (saved) toast('נשמר רק במכשיר הזה. כדי שיופיע בשאר המכשירים צריך להתחבר לגוגל');
+  renderBanner();
+}
+function useRedirectAuth(){
+  return typeof isIOS === 'function' && isIOS();
+}
+function randomState(){
+  const a = new Uint8Array(16);
+  crypto.getRandomValues(a);
+  return Array.from(a, b => b.toString(16).padStart(2, '0')).join('');
+}
+function takeTypedClientId(){
+  const el = $('stClientId');
+  if (!el) return true;
+  const typed = el.value.trim();
+  if (!typed || typed === clientId()) return true;
+  if (!/\.apps\.googleusercontent\.com$/.test(typed)){ toast('המפתח צריך להיגמר ב-apps.googleusercontent.com'); return false; }
+  LS.set('clientId', typed); tokenClient = null;
+  return true;
+}
+function thisRedirectUri(){
+  return GoogleAuth.redirectUri(location.origin, location.pathname);
+}
+function startRedirect(opts){
+  const state = opts.state || randomState();
+  LS.set('oauthState', state);
+  location.assign(GoogleAuth.buildGoogleAuthUrl({
+    clientId: clientId(),
+    redirectUri: thisRedirectUri(),
+    scope: SCOPES,
+    prompt: opts.prompt || 'consent',
+    state: state,
+    loginHint: CFG.LOGIN_HINT || ''
+  }));
+}
+function consumeAuthReturn(){
+  const parsed = GoogleAuth.parseOAuthHash(location.hash);
+  if (!parsed) return false;
+  history.replaceState(null, '', location.pathname + location.search);
+  const expect = LS.get('oauthState', '');
+  if (expect && parsed.state && parsed.state !== expect) return false;
+  LS.del('oauthState');
+  if (parsed.error){
+    if (parsed.state === 'silent') LS.set('needInteractive', true);
+    else toast(parsed.error === 'redirect_uri_mismatch' ? 'צריך להוסיף את כתובת החזרה בהגדרות גוגל' : 'ההתחברות לא הושלמה');
+    return false;
+  }
+  if (!parsed.access_token) return false;
+  S.token = { access_token: parsed.access_token, exp: Date.now() + (parsed.expires_in || 3600) * 1000 };
+  LS.set('gtoken', S.token);
+  S.connected = true;
+  LS.set('connected', true);
+  LS.set('oauthVia', 'redirect');
+  LS.del('needInteractive');
+  LS.set('justConnected', true);
+  return true;
+}
+function shouldSilentRenew(){
+  return S.connected && clientId() && !tokenValid() && LS.get('oauthVia', '') === 'redirect' && !LS.get('needInteractive', false);
+}
+function connectInteractive(){
+  if (!takeTypedClientId()) return;
+  if (!clientId()){ openGoogle(); toast('קודם מדביקים את מפתח החיבור'); const box = $('gSetup'); if (box) box.open = true; $('stClientId').focus(); return; }
+  if (useRedirectAuth()) startRedirect({ prompt: 'consent' });
+  else connect('consent');
+}
 function openSettings(){
   $('stClientId').value = clientId();
   $('stDefaultReminder').value = String(S.settings.defaultReminder);
   $('stEmailReminder').checked = !!S.settings.emailReminder;
-  $('stGColor').checked = !!S.settings.gColor;
   renderThemes();
   renderCatList();
   $('stVersion').textContent = VERSION;
@@ -694,40 +791,61 @@ function renderGoogleSettings(){
   const has = !!clientId();
   const ok = S.connected && tokenValid();
   const last = LS.get('lastSync', 0);
-  $('stGoogleStatus').textContent = !has ? 'עוד לא הוגדר' :
-    ok ? ('מחובר' + (last ? ' · סנכרון אחרון ' + hm(new Date(last)) : '')) : (S.connected ? 'החיבור פג. לחץ על התחברות.' : 'לא מחובר');
+  const who = accountLabel();
+  const n = localNoteCount();
+  $('stGoogleStatus').textContent = !has ? 'חסר מפתח' : ok ? 'מחובר' : (S.connected ? 'החיבור פג' : 'לא מחובר');
+  $('stGoogleExplain').textContent = ok
+    ? ('מחובר כ-' + who + '. כל פתק חדש, עריכה, מחיקה וקטגוריה נכתבים ליומן הראשי בגוגל, ואז מגיעים לכל מכשיר שמחובר לאותו חשבון.' + (last ? ' סנכרון אחרון ' + hm(new Date(last)) + '.' : ''))
+    : ('החשבון הוא ' + (CFG.LOGIN_HINT || who) + '. החיבור נשמר רק באפליקציה הזו: האייקון במסך הבית, לשונית בספארי, והמק הם חיבורים נפרדים. בלי חיבור הפתקים נשארים רק כאן.');
   $('stConnect').classList.toggle('hidden', ok);
-  $('gSetup').classList.toggle('hidden', has && S.connected);
-  $('stConnect').textContent = S.connected ? 'חיבור מחדש' : 'התחברות לגוגל';
+  $('stConnect').textContent = S.connected ? 'חיבור מחדש לגוגל' : 'התחברות לגוגל';
+  const upload = $('stUploadLocal');
+  if (upload){
+    upload.classList.toggle('hidden', !ok || !n);
+    upload.textContent = 'העלאת ' + n + ' פתקים מהמכשיר לגוגל';
+  }
+  $('gSetup').open = !has;
   $('stSyncNow').classList.toggle('hidden', !ok);
   $('stDisconnect').classList.toggle('hidden', !S.connected);
+  const redir = $('redirectUri');
+  if (redir) redir.textContent = thisRedirectUri();
   $('stCalendars').innerHTML = S.connected && S.calendars.length ? '<p class="muted small">יומנים להצגה:</p>' + S.calendars.map(c =>
     `<label><input type="checkbox" data-cal="${esc(c.id)}" ${c.selected!==false?'checked':''}><i style="background:${c.color}"></i>${esc(c.summary)}${c.primary?' (ראשי)':''}</label>`).join('') : '';
 }
 function openGoogle(){ openSettings(); setTimeout(() => $('googleCard').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100); }
 async function connect(prompt){
-  const typed = $('stClientId').value.trim();
-  if (typed && typed !== clientId()){
-    if (!/\.apps\.googleusercontent\.com$/.test(typed)){ toast('המפתח צריך להיגמר ב-apps.googleusercontent.com'); return; }
-    LS.set('clientId', typed); tokenClient = null;
-  }
-  if (!clientId()){ openGoogle(); toast('קודם מדביקים את ה-Client ID'); $('stClientId').focus(); return; }
+  if (!takeTypedClientId()) return;
+  if (!clientId()){ openGoogle(); toast('קודם מדביקים את מפתח החיבור'); $('stClientId').focus(); return; }
+  const waiting = localNoteCount();
   try {
     await requestToken(S.connected ? prompt : 'consent');
-    toast('מחובר לגוגל קלנדר');
+    LS.set('oauthVia', 'gis');
     fetchedMonths.clear(); fetchedMonths.add(S.cursor);
     await sync({ calendars: true });
-    // upload events that were created locally before connecting
+    const who = accountLabel();
+    toast(waiting ? ('מחובר כ-' + who + '. מעלה ' + waiting + ' פתקים לגוגל') : ('מחובר כ-' + who));
     renderGoogleSettings();
   } catch(e){
     console.warn('auth', e);
-    toast(e.message === 'no-client-id' ? 'חסר Client ID' : 'ההתחברות לא הושלמה');
+    const popup = /popup/i.test(e.message || '');
+    toast(e.message === 'no-client-id' ? 'חסר מפתח חיבור' : (popup ? 'החלון של גוגל נחסם. באייפון מתחברים מתוך האייקון במסך הבית.' : 'ההתחברות לא הושלמה'));
   }
   renderBanner();
 }
+async function uploadLocalNotes(){
+  const n = localNoteCount();
+  if (!n){ toast('אין פתקים שנשארו רק במכשיר'); renderGoogleSettings(); return; }
+  if (!(S.connected && tokenValid())){ connectInteractive(); return; }
+  enqueueUnsynced();
+  toast('מעלה ' + n + ' פתקים לגוגל');
+  await sync({ calendars: true });
+  const left = localNoteCount();
+  toast(left ? ('נשארו ' + left + ' פתקים במכשיר. השליחה תינסה שוב.') : 'הפתקים עלו לגוגל');
+  renderGoogleSettings();
+}
 function disconnect(){
   if (S.token && window.google && google.accounts) try { google.accounts.oauth2.revoke(S.token.access_token, () => {}); } catch(e){}
-  S.token = null; S.connected = false; LS.del('gtoken'); LS.set('connected', false);
+  S.token = null; S.connected = false; LS.del('gtoken'); LS.set('connected', false); LS.del('oauthVia'); LS.del('gaccount');
   for (const [id, ev] of Object.entries(S.events)) if (!String(id).startsWith('local-')) delete S.events[id];
   S.ops = S.ops.filter(o => String(o.id).startsWith('local-')); saveOps();
   S.calendars = []; LS.set('calendars', []); saveEvents();
@@ -829,11 +947,20 @@ function bind(){
     if (S.view === 'wrap' && typeof renderWrap === 'function') renderWrap();
   });
   $('settingsBackdrop').addEventListener('click', e => { if (e.target.id === 'settingsBackdrop') $('settingsBackdrop').classList.add('hidden'); });
-  $('stConnect').onclick = () => connect('consent');
-  $('stSyncNow').onclick = async () => { fetchedMonths.clear(); await sync({ calendars: true }); renderGoogleSettings(); toast('סונכרן'); };
-  $('stDisconnect').onclick = () => { if (confirm('לנתק את גוגל קלנדר מהטלפון הזה?')) disconnect(); };
+  $('stConnect').onclick = () => connectInteractive();
+  if ($('stUploadLocal')) $('stUploadLocal').onclick = () => uploadLocalNotes();
+  if ($('edConnect')) $('edConnect').onclick = () => {
+    if ($('edTitle').value.trim()) $('editor').requestSubmit();
+    connectInteractive();
+  };
+  if ($('vcConnect')) $('vcConnect').onclick = () => connectInteractive();
+  $('stSyncNow').onclick = async () => { fetchedMonths.clear(); await sync({ calendars: true }); renderGoogleSettings(); toast(S.ops.length ? 'עדיין יש שינויים שממתינים' : 'סונכרן עם גוגל'); };
+  $('stDisconnect').onclick = () => { if (confirm('לנתק את גוגל מהאפליקציה הזו? הפתקים שנמצאים בגוגל נשארים שם.')) disconnect(); };
   $('copyOrigin').onclick = async () => { try { await navigator.clipboard.writeText('https://token-byte.github.io'); toast('הועתק'); } catch(e){ toast('https://token-byte.github.io'); } };
-  $('stGColor').onchange = e => { S.settings.gColor = e.target.checked; saveSettings(); };
+  if ($('copyRedirect')) $('copyRedirect').onclick = async () => {
+    const uri = thisRedirectUri();
+    try { await navigator.clipboard.writeText(uri); toast('כתובת החזרה הועתקה'); } catch(e){ toast(uri); }
+  };
   $('catReset').onclick = () => { if (confirm('לחזור לקטגוריות ברירת המחדל?')){ S.cats = defaultCats(); saveCats(); renderCatList(); render(); } };
   $('catAdd').onclick = () => { S.cats.push({ id: 'c' + Date.now().toString(36), name: 'קטגוריה חדשה', color: '#5ac8fa', kw: '' }); saveCats(); renderCatList(); };
   $('catList').addEventListener('input', e => {
@@ -888,6 +1015,14 @@ function bind(){
 let lastVisibleToday = todayKey();
 
 if ('serviceWorker' in navigator){
+  let hadController = !!navigator.serviceWorker.controller;
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController){ hadController = true; return; }
+    if (refreshing) return;
+    refreshing = true;
+    location.reload();
+  });
   navigator.serviceWorker.register('sw.js').catch(e => console.warn('sw', e));
   navigator.serviceWorker.addEventListener('message', e => {
     if (e.data && e.data.k){
@@ -908,6 +1043,7 @@ maybeShowInstall();
   if (d && /^\d{4}-\d\d-\d\d$/.test(d)){ S.sel = d; S.cursor = firstOfMonth(d); window.__openDay = d; }
   if (p.get('view') === 'wrap') S.view = 'wrap';
 })();
+const resumedAuth = consumeAuthReturn();
 render();
 requestAnimationFrame(() => {
   render();
@@ -918,5 +1054,14 @@ requestAnimationFrame(() => {
   }
 });
 fetchedMonths.add(S.cursor);
-sync({ calendars: true });
+if (shouldSilentRenew()) startRedirect({ prompt: 'none', state: 'silent' });
+else {
+  const waiting = LS.get('justConnected', false) ? localNoteCount() : 0;
+  if (LS.get('justConnected', false)) LS.del('justConnected');
+  sync({ calendars: true }).then(() => {
+    if (!resumedAuth && !waiting) return;
+    const who = accountLabel();
+    toast(waiting ? ('מחובר כ-' + who + '. מעלה ' + waiting + ' פתקים לגוגל') : ('מחובר כ-' + who));
+  });
+}
 scheduleNotifications();
