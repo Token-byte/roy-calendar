@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '2.1.0';
+const VERSION = '2.2.0';
 const CFG = window.APP_CONFIG || {};
 const TZ = CFG.TIME_ZONE || 'Asia/Jerusalem';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly';
@@ -22,7 +22,7 @@ const S = {
   calendars: LS.get('calendars', []),
   token: LS.get('gtoken', null),         // {access_token, exp}
   connected: LS.get('connected', false),
-  settings: Object.assign({ defaultReminder: 15, emailReminder: false, gColor: true }, LS.get('settings', {})),
+  settings: Object.assign({ defaultReminder: 15, emailReminder: false, gColor: true, posterTheme: 'blue' }, LS.get('settings', {})),
   cats: LS.get('cats', null) || defaultCats(),
   fired: LS.get('fired', {}),
   view: 'year',
@@ -143,6 +143,7 @@ function toGoogle(ev){
   };
   const cat = catOfEvent(ev);
   if (S.settings.gColor && cat) body.colorId = cat.g || nearestGColor(cat.color);
+  if (ev.rrule) body.recurrence = ['RRULE:' + String(ev.rrule).replace(/^RRULE:/, '')];
   body.extendedProperties = { private: { royCat: ev.cat || '' } };
   const overrides = [];
   if (ev.reminder != null && ev.reminder >= 0){
@@ -276,7 +277,7 @@ async function sync(opts = {}){
     await flushOps();
     let from, to;
     if (opts.from && opts.to){ from = opts.from; to = opts.to; }
-    else if (S.view === 'year' && typeof displayedYear === 'function'){
+    else if ((S.view === 'year' || S.view === 'wrap') && typeof displayedYear === 'function'){
       const y = displayedYear();
       from = y + '-01-01';
       to = (y + 1) + '-01-01';
@@ -310,28 +311,22 @@ const $ = (id) => document.getElementById(id);
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 function render(){
+  if (S.view !== 'wrap') S.view = 'year';
   document.body.classList.toggle('view-year', S.view === 'year');
-  $('topbar').classList.toggle('hidden', S.view === 'year');
-  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('active', b.dataset.view === S.view));
+  document.body.classList.toggle('view-wrap', S.view === 'wrap');
+  $('topbar').classList.add('hidden');
   $('yearView').classList.toggle('hidden', S.view !== 'year');
-  $('monthView').classList.toggle('hidden', S.view !== 'month');
-  $('dayView').classList.toggle('hidden', S.view !== 'day');
-  $('listView').classList.toggle('hidden', S.view !== 'list');
-  const titleKey = S.view === 'month' ? S.cursor : S.sel;
-  const td = parseKey(titleKey);
-  if (S.view === 'year'){
-    const y = td.getFullYear();
-    $('title').textContent = String(y);
-    document.title = 'THE BIG SHABBAT CALENDAR ' + y;
-  } else {
-    document.title = 'יומן';
-    $('title').innerHTML = esc(HE_MONTHS[td.getMonth()]) + (td.getFullYear() !== new Date().getFullYear() ? '<small>' + td.getFullYear() + '</small>' : '');
-  }
-  if (S.view === 'year' && typeof renderYear === 'function') renderYear();
-  else if (S.view === 'month') renderMonth();
-  else if (S.view === 'day') renderDay();
-  else renderList();
+  $('wrapView').classList.toggle('hidden', S.view !== 'wrap');
+  const y = parseKey(S.sel).getFullYear();
+  document.title = S.view === 'wrap' ? 'הסיכום' : ('THE BIG SHABBAT CALENDAR ' + y);
+  applyPosterTheme();
+  if (S.view === 'wrap' && typeof renderWrap === 'function') renderWrap();
+  else if (typeof renderYear === 'function') renderYear();
   if (S.view !== 'year' && typeof yearOnHide === 'function') yearOnHide();
+  const sheetOpen = $('ySheet') && !$('ySheet').classList.contains('hidden');
+  const showFloat = S.view === 'year' && !sheetOpen;
+  if ($('fab')) $('fab').style.visibility = showFloat ? '' : 'hidden';
+  if ($('micBtn')) $('micBtn').style.visibility = showFloat ? '' : 'hidden';
   renderBanner();
 }
 function renderWeekdays(){
@@ -466,10 +461,10 @@ function maybeFetchForCursor(){
 }
 function setView(v){
   const prev = S.view;
-  S.view = v;
-  if (v === 'month') S.cursor = firstOfMonth(S.sel);
+  S.view = v === 'wrap' ? 'wrap' : 'year';
   render();
-  if (v === 'year' && prev !== 'year') sync();
+  if (S.view === 'year' && prev === 'wrap') { /* poster already has the year */ }
+  else if (prev !== S.view) sync();
 }
 
 /* ---------- editor ---------- */
@@ -595,11 +590,44 @@ function updateNotifStatus(){
 }
 
 /* ---------- settings ---------- */
+const POSTER_THEMES = {
+  blue:   { name:'כחול', ink:'#1F3FA8', wkend:'#A9CFEF', line:'#9DB3D9', paper:'#ffffff', work:'#BCD4FF', sport:'#FF8F86', other:'#FFE978', wrap:'#1F3FA8' },
+  purple: { name:'סגול', ink:'#4C1D95', wkend:'#D8C7F8', line:'#B9A6E4', paper:'#FCFAFF', work:'#D4C4FF', sport:'#FF9B93', other:'#FFE978', wrap:'#4C1D95' },
+  green:  { name:'ירוק', ink:'#0F6B45', wkend:'#B7E3CC', line:'#8FCBB0', paper:'#F6FFF9', work:'#C5D9FF', sport:'#FF9B93', other:'#FFE978', wrap:'#0F6B45' },
+  coral:  { name:'אלמוג', ink:'#9A3412', wkend:'#F8CDB8', line:'#E7B39A', paper:'#FFF8F4', work:'#C9D7FF', sport:'#F3B2A8', other:'#FFE08A', wrap:'#9A3412' },
+  sand:   { name:'חול', ink:'#6B4A2B', wkend:'#F0D7B4', line:'#E0C4A0', paper:'#FFF9F1', work:'#C9D8FF', sport:'#F0A297', other:'#FFE08A', wrap:'#6B4A2B' },
+  dark:   { name:'כהה', ink:'#E8EEFF', wkend:'#243056', line:'#3C4C7A', paper:'#10131C', work:'#9EBEFF', sport:'#FF9B93', other:'#FFE08A', wrap:'#171C33', dark:true },
+};
+function posterTheme(){ return POSTER_THEMES[S.settings.posterTheme] || POSTER_THEMES.blue; }
+function applyPosterTheme(){
+  const t = posterTheme();
+  const root = document.documentElement;
+  root.style.setProperty('--ink', t.ink);
+  root.style.setProperty('--wkend', t.wkend);
+  root.style.setProperty('--pline', t.line);
+  root.style.setProperty('--paper', t.paper);
+  root.style.setProperty('--n-work', t.work);
+  root.style.setProperty('--n-sport', t.sport);
+  root.style.setProperty('--n-other', t.other);
+  root.style.setProperty('--wrap', t.wrap);
+  document.body.classList.toggle('poster-dark', !!t.dark);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', t.dark ? t.paper : t.wrap);
+}
+function renderThemes(){
+  const cur = S.settings.posterTheme || 'blue';
+  const el = $('themeList');
+  if (!el) return;
+  el.innerHTML = Object.entries(POSTER_THEMES).map(([id, t]) =>
+    `<button type="button" data-theme="${id}" class="${id === cur ? 'on' : ''}" style="--sw:${t.wrap};--sw2:${t.wkend}"><i></i><span>${t.name}</span></button>`
+  ).join('');
+}
 function openSettings(){
   $('stClientId').value = clientId();
   $('stDefaultReminder').value = String(S.settings.defaultReminder);
   $('stEmailReminder').checked = !!S.settings.emailReminder;
   $('stGColor').checked = !!S.settings.gColor;
+  renderThemes();
   renderCatList();
   $('stVersion').textContent = VERSION;
   renderGoogleSettings(); updateNotifStatus();
@@ -682,6 +710,7 @@ function maybeShowInstall(){
 /* ---------- wiring ---------- */
 function bind(){
   if (typeof initYear === 'function') initYear();
+  if (typeof initWrap === 'function') initWrap();
   renderWeekdays();
   $('btnPrev').onclick = () => go(-1);
   $('btnNext').onclick = () => go(1);
@@ -733,6 +762,15 @@ function bind(){
   $('editorBackdrop').addEventListener('click', e => { if (e.target.id === 'editorBackdrop') closeEditor(); });
 
   $('stClose').onclick = () => $('settingsBackdrop').classList.add('hidden');
+  if ($('themeList')) $('themeList').addEventListener('click', e => {
+    const b = e.target.closest('[data-theme]'); if (!b) return;
+    S.settings.posterTheme = b.dataset.theme;
+    saveSettings();
+    renderThemes();
+    applyPosterTheme();
+    if (S.view === 'year' && typeof renderYear === 'function'){ /* colors are CSS variables */ }
+    if (S.view === 'wrap' && typeof renderWrap === 'function') renderWrap();
+  });
   $('settingsBackdrop').addEventListener('click', e => { if (e.target.id === 'settingsBackdrop') $('settingsBackdrop').classList.add('hidden'); });
   $('stConnect').onclick = () => connect('consent');
   $('stSyncNow').onclick = async () => { fetchedMonths.clear(); await sync({ calendars: true }); renderGoogleSettings(); toast('סונכרן'); };
@@ -771,8 +809,15 @@ function bind(){
   window.addEventListener('online', () => { renderBanner(); sync(); });
   window.addEventListener('offline', renderBanner);
   window.addEventListener('resize', () => {
-    if (S.view === 'month') renderMonth();
-    else if (S.view === 'year' && typeof renderYear === 'function') renderYear();
+    if (S.view === 'year' && typeof renderYear === 'function') renderYear();
+  });
+  window.addEventListener('orientationchange', () => {
+    setTimeout(() => { if (S.view === 'year' && typeof renderYear === 'function') renderYear(); }, 280);
+  });
+  document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+  document.addEventListener('dblclick', e => {
+    if (e.target.closest && e.target.closest('input, textarea')) return;
+    e.preventDefault();
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible'){
@@ -787,14 +832,34 @@ let lastVisibleToday = todayKey();
 
 if ('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js').catch(e => console.warn('sw', e));
-  navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.k){ S.sel = e.data.k; setView('day'); } });
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data && e.data.k){
+      S.sel = e.data.k;
+      S.cursor = firstOfMonth(e.data.k);
+      S.view = 'year';
+      render();
+      if (typeof selectDay === 'function') selectDay(e.data.k, true);
+    }
+  });
 }
 bind();
 maybeShowInstall();
 // deep link ?d=YYYY-MM-DD&view=day
-(() => { const p = new URLSearchParams(location.search); const d = p.get('d'); if (d && /^\d{4}-\d\d-\d\d$/.test(d)){ S.sel = d; S.cursor = firstOfMonth(d); } const v = p.get('view'); if (['year','month','day','list'].includes(v)) S.view = v; })();
+(() => {
+  const p = new URLSearchParams(location.search);
+  const d = p.get('d');
+  if (d && /^\d{4}-\d\d-\d\d$/.test(d)){ S.sel = d; S.cursor = firstOfMonth(d); window.__openDay = d; }
+  if (p.get('view') === 'wrap') S.view = 'wrap';
+})();
 render();
-requestAnimationFrame(() => render());
+requestAnimationFrame(() => {
+  render();
+  if (window.__openDay && typeof selectDay === 'function'){
+    const k = window.__openDay;
+    window.__openDay = null;
+    selectDay(k, true);
+  }
+});
 fetchedMonths.add(S.cursor);
 sync({ calendars: true });
 scheduleNotifications();

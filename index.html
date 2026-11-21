@@ -2,13 +2,14 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>יומן</title>
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#1F3FA8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="יומן">
+<meta name="format-detection" content="telephone=no">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -35,17 +36,20 @@
     <section id="yearView" class="view">
       <div class="y-top" id="yTop">
         <div id="yChrome">
-          <button type="button" class="y-arrow" id="yPrev" aria-label="שנה קודמת">›</button>
-          <div class="y-titlewrap">
+          <div class="y-titlebar">
+            <button type="button" class="y-gear" id="ySettings" aria-label="הגדרות"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M19.4 13.5a7.7 7.7 0 0 0 .1-1.5 7.7 7.7 0 0 0-.1-1.5l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-2.6-1.5l-.4-2.6h-4l-.4 2.6a7.4 7.4 0 0 0-2.6 1.5l-2.4-1-2 3.4 2 1.6a7.7 7.7 0 0 0-.1 1.5 7.7 7.7 0 0 0 .1 1.5l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 2.6 1.5l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 2.6-1.5l2.4 1 2-3.4-2-1.6zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg></button>
             <div class="y-title" id="yTitle" lang="en">THE BIG SHABBAT CALENDAR</div>
+            <button type="button" class="y-wrapbtn" id="yWrapBtn">סיכום</button>
+          </div>
+          <div class="y-subbar">
+            <button type="button" class="y-arrow" id="yPrev" aria-label="שנה קודמת">›</button>
             <div class="y-legend">
               <span><i class="work"></i>עבודה ופגישות</span>
               <span><i class="sport"></i>ספורט</span>
               <span><i class="other"></i>אחר</span>
             </div>
+            <button type="button" class="y-arrow" id="yNext" aria-label="שנה הבאה">‹</button>
           </div>
-          <button type="button" class="y-arrow" id="yNext" aria-label="שנה הבאה">‹</button>
-          <button type="button" class="y-gear" id="ySettings" aria-label="הגדרות"><svg viewBox="0 0 24 24" width="20" height="20"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
         </div>
         <div id="yZoombar" class="hidden" dir="ltr">
           <div class="y-zbtns">
@@ -98,14 +102,13 @@
     <section id="listView" class="view hidden">
       <div class="agenda" id="agenda"></div>
     </section>
+    <section id="wrapView" class="view hidden"></section>
   </main>
 
-  <nav class="tabs">
+  <nav class="tabs" hidden>
     <button data-view="year" class="active">שנה</button>
-    <button data-view="month">חודש</button>
-    <button data-view="day">יום</button>
-    <button data-view="list">רשימה</button>
   </nav>
+  <button class="micfab" id="micBtn" aria-label="הוספה בקול"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11h-2z"/></svg></button>
   <button class="fab" id="fab" aria-label="אירוע חדש">+</button>
 </div>
 
@@ -175,6 +178,11 @@
       <button type="button" class="link strong" id="stClose">סגירה</button>
     </div>
 
+    <div class="card" id="themeCard">
+      <div class="card-head"><b>צבע הלוח</b></div>
+      <div class="themes" id="themeList"></div>
+    </div>
+
     <div class="card" id="googleCard">
       <div class="card-head"><b>גוגל קלנדר</b><span class="muted small" id="stGoogleStatus">לא מחובר</span></div>
       <div id="gSetup">
@@ -227,7 +235,33 @@
 </div>
 
 <div class="toast hidden" id="toast"></div>
+
+<div class="vconfirm hidden" id="voiceConfirm" role="status">
+  <div class="vconfirm-body">
+    <b id="vcTitle"></b>
+    <div id="vcWhen"></div>
+  </div>
+  <button type="button" id="vcUndo">בטל</button>
+</div>
+
+<div class="sheet-backdrop hidden" id="voiceBackdrop">
+  <form class="sheet" id="voiceSheet" autocomplete="off">
+    <div class="sheet-head">
+      <button type="button" class="link" id="voiceCancel">סגירה</button>
+      <strong>פתק בקול</strong>
+      <button type="submit" class="link strong">יצירה</button>
+    </div>
+    <p class="small" id="voiceHint"></p>
+    <button type="button" class="voice-mic hidden" id="voiceMic">האזנה</button>
+    <textarea id="voiceText" class="input" rows="3" placeholder="יום ראשון בשעה 12:00 טיפוס" enterkeyhint="done"></textarea>
+    <p class="muted small">באייפון, אם אין כפתור האזנה, לוחצים על המיקרופון במקלדת. קיצור: הכתבת טקסט ואז פתיחת הכתובת עם הטקסט אחרי ?add=</p>
+  </form>
+</div>
+
+<script src="parse-he.js"></script>
 <script src="year.js"></script>
+<script src="wrap.js"></script>
 <script src="app.js"></script>
+<script src="voice.js"></script>
 </body>
 </html>
