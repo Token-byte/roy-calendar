@@ -143,6 +143,7 @@
       <strong id="edTitleLbl">אירוע חדש</strong>
       <button type="submit" class="link strong">שמירה</button>
     </div>
+    <p class="warn hidden" id="edGoogleWarn">בלי חיבור לגוגל הפתק נשמר רק באפליקציה הזו, ולא מופיע בגוגל, בטלפון אחר או במק. <button type="button" id="edConnect">התחברות לגוגל</button></p>
     <input id="edTitle" class="big-input" placeholder="מה קורה?" required>
     <div class="cats" id="edCats"></div>
     <label class="row"><span>כל היום</span><input type="checkbox" id="edAllDay" class="switch"></label>
@@ -189,20 +190,25 @@
 
     <div class="card" id="googleCard">
       <div class="card-head"><b>גוגל קלנדר</b><span class="muted small" id="stGoogleStatus">לא מחובר</span></div>
-      <div id="gSetup">
-        <p class="small">גוגל דורשת מפתח חיבור אישי (Client ID). עושים את זה פעם אחת, בערך 5 דקות, מהמחשב או מהטלפון:</p>
+      <p class="small" id="stGoogleExplain">החשבון הוא roifridman24@gmail.com. החיבור נשמר רק באפליקציה הזו.</p>
+      <button class="primary" id="stConnect">התחברות לגוגל</button>
+      <button class="secondary hidden" id="stUploadLocal">העלאת הפתקים מהמכשיר לגוגל</button>
+      <button class="secondary hidden" id="stSyncNow">סנכרון עכשיו</button>
+      <div id="stCalendars" class="cal-list"></div>
+      <details id="gSetup">
+        <summary>מפתח חיבור, פעם אחת לכל התקנה</summary>
+        <p class="small">גוגל דורשת מפתח חיבור (Client ID). אם כבר יצרתם אותו, רק מדביקים אותו כאן. התקנה חדשה של האייקון לא זוכרת אותו.</p>
         <ol class="gsteps small">
           <li><a href="https://console.cloud.google.com/flows/enableapi?apiid=calendar-json.googleapis.com" target="_blank" rel="noopener">פותחים את הקישור הזה</a> עם roifridman24@gmail.com, יוצרים פרויקט ומאשרים Enable.</li>
           <li><a href="https://console.cloud.google.com/auth/overview" target="_blank" rel="noopener">מסך ההסכמה</a>: Get started, שם "יומן", External, המייל שלך. אחר כך ב-<a href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noopener">Audience</a> מוסיפים את עצמך כ-Test user.</li>
           <li><a href="https://console.cloud.google.com/auth/clients/create" target="_blank" rel="noopener">יוצרים Client</a>: Web application. ב-Authorized JavaScript origins מדביקים:
-            <button type="button" class="copy" id="copyOrigin"><code>https://token-byte.github.io</code> העתקה</button></li>
+            <button type="button" class="copy" id="copyOrigin"><code>https://token-byte.github.io</code> העתקה</button>
+            וב-Authorized redirect URIs מדביקים:
+            <button type="button" class="copy" id="copyRedirect"><code id="redirectUri">https://token-byte.github.io/roy-calendar/</code> העתקה</button></li>
           <li>מעתיקים את ה-Client ID ומדביקים כאן:</li>
         </ol>
         <input id="stClientId" class="input ltr" placeholder="....apps.googleusercontent.com" inputmode="url">
-      </div>
-      <button class="primary" id="stConnect">התחברות לגוגל</button>
-      <button class="secondary hidden" id="stSyncNow">סנכרון עכשיו</button>
-      <div id="stCalendars" class="cal-list"></div>
+      </details>
       <button class="link small hidden" id="stDisconnect">ניתוק</button>
     </div>
 
@@ -211,7 +217,7 @@
       <p class="muted small">עבודה כחול, ספורט אדום, אישי ירוק, חשוב סגול. צהוב רק לאירוע בלי קטגוריה. בחירה ידנית ביום גוברת על הזיהוי לפי השם.</p>
       <div id="catList"></div>
       <button class="secondary" id="catAdd">+ קטגוריה</button>
-      <label class="row"><span>לצבוע גם בגוגל קלנדר</span><input type="checkbox" id="stGColor" class="switch"></label>
+      <p class="muted small">הקטגוריה והצבע נכתבים לגוגל עם כל פתק.</p>
     </div>
 
     <div class="card">
@@ -245,6 +251,7 @@
     <b id="vcTitle"></b>
     <div id="vcWhen"></div>
   </div>
+  <button type="button" id="vcConnect" class="hidden">חיבור</button>
   <button type="button" id="vcUndo">בטל</button>
 </div>
 
@@ -265,6 +272,7 @@
 <script src="parse-he.js"></script>
 <script src="cats-auto.js"></script>
 <script src="sync-keep.js"></script>
+<script src="google-auth.js"></script>
 <script src="year.js"></script>
 <script src="wrap.js"></script>
 <script src="app.js"></script>
