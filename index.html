@@ -45,8 +45,10 @@
           <div class="y-subbar">
             <button type="button" class="y-arrow" id="yPrev" aria-label="שנה קודמת">›</button>
             <div class="y-legend">
-              <span><i class="work"></i>עבודה ופגישות</span>
+              <span><i class="work"></i>עבודה</span>
               <span><i class="sport"></i>ספורט</span>
+              <span><i class="personal"></i>אישי</span>
+              <span><i class="important"></i>חשוב</span>
               <span><i class="other"></i>אחר</span>
             </div>
             <button type="button" class="y-arrow" id="yNext" aria-label="שנה הבאה">‹</button>
@@ -77,6 +79,7 @@
         </div>
         <span id="yHint">צבוט כדי להתקרב ולקרוא את הפתקים</span>
       </div>
+      <div class="ysheet-back hidden" id="ySheetBack"></div>
       <div class="ysheet hidden" id="ySheet" aria-hidden="true">
         <button type="button" class="ysheet-handle" id="ySheetHandle" aria-label="סגירה"></button>
         <div class="ysheet-head">
@@ -205,7 +208,7 @@
 
     <div class="card">
       <div class="card-head"><b>צבעים לפי סוג</b><button class="link small" id="catReset">איפוס</button></div>
-      <p class="muted small">הצבע נקבע אוטומטית לפי מילים בשם האירוע. הראשונה שמתאימה קובעת.</p>
+      <p class="muted small">עבודה כחול, ספורט אדום, אישי ירוק, חשוב סגול. צהוב רק לאירוע בלי קטגוריה. בחירה ידנית ביום גוברת על הזיהוי לפי השם.</p>
       <div id="catList"></div>
       <button class="secondary" id="catAdd">+ קטגוריה</button>
       <label class="row"><span>לצבוע גם בגוגל קלנדר</span><input type="checkbox" id="stGColor" class="switch"></label>
@@ -260,6 +263,7 @@
 </div>
 
 <script src="parse-he.js"></script>
+<script src="cats-auto.js"></script>
 <script src="year.js"></script>
 <script src="wrap.js"></script>
 <script src="app.js"></script>

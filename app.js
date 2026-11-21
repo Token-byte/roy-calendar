@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '2.3.1';
+const VERSION = '2.3.2';
 const CFG = window.APP_CONFIG || {};
 const TZ = CFG.TIME_ZONE || 'Asia/Jerusalem';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly';
@@ -51,12 +51,13 @@ function dayEndMs(k){ return parseKey(addDays(k,1)).getTime(); }
 /* ---------- categories (auto color by title) ---------- */
 function defaultCats(){
   return [
-    { id:'sport', name:'ספורט', color:'#ff3b30', g:'11', kw:'אימון, כושר, חדר כושר, טיפוס, אגרוף, ריצה, ספורט, יוגה, פילאטיס, שחייה, כדורגל, כדורסל, טניס, הליכה, gym, workout, sport, climbing, boxing, run, yoga, swim, training, pilates' },
+    { id:'important', name:'חשוב', color:'#b794f6', g:'3', kw:'יום הולדת, יום נישואין, יום נישואים, חתונה, יום שנה, birthday, anniversary, wedding' },
+    { id:'sport', name:'ספורט', color:'#ff3b30', g:'11', kw:'אימון, כושר, חדר כושר, טיפוס, אגרוף, בוקס, ריצה, ספורט, יוגה, פילאטיס, שחייה, כדורגל, כדורסל, טניס, הליכה, gym, workout, sport, climbing, boxing, run, yoga, swim, training, pilates' },
+    { id:'work', name:'עבודה', color:'#0a84ff', g:'9', kw:'פגישה, עבודה, ראיון, צילום, צילומים, עריכה, לקוח, לקוחה, שיחה, זום, משמרת, ייעוץ, meeting, work, interview, call, zoom, client, filming, shoot, editing' },
+    { id:'personal', name:'אישי', color:'#34c759', g:'2', kw:'אמא, אבא, משפחה, חברים, חבר, חברה שלי, בת זוג, בן זוג, טיול, ארוחה, דייט, אחי, אחות, אחותי, סבתא, סבא, רופא, רופאה, family, friends, mom, dad, trip, dinner, date, doctor, dentist' },
     { id:'study', name:'לימודים', color:'#af52de', g:'3', kw:'קורס, לימודים, מבחן, פסיכומטרי, שיעור, הרצאה, תואר, אוניברסיטה, מכללה, רענון, study, course, exam, class, lecture, school' },
-    { id:'content', name:'תוכן', color:'#ff9500', g:'6', kw:'צילומים, צילום, עריכה, תוכן, סרטון, רילס, ריל, שוט, פוסט, filming, shoot, editing, edit, content, video, reel, clip' },
-    { id:'admin', name:'סידורים', color:'#c9a000', g:'5', kw:'רכב, מוסך, טסט, בנק, מס, מסים, מיסים, רשות המסים, רופא, רופאה, דרכון, ביטוח, תשלום, לשלם, סידורים, car, bank, tax, doctor, dentist, passport, insurance, pay' },
-    { id:'personal', name:'אישי', color:'#34c759', g:'2', kw:'אמא, אבא, משפחה, חברים, חברה שלי, בת זוג, בן זוג, טיול, יום הולדת, ארוחה, דייט, אחי, אחותי, סבתא, סבא, family, friends, mom, dad, trip, birthday, dinner, date' },
-    { id:'work', name:'עבודה ופגישות', color:'#0a84ff', g:'9', kw:'פגישה, עבודה, ראיון, שיחה, זום, לקוח, לקוחה, משמרת, ייעוץ, meeting, work, interview, call, zoom, client, meet, sync' },
+    { id:'content', name:'תוכן', color:'#ff9500', g:'6', kw:'תוכן, סרטון, רילס, ריל, שוט, פוסט, content, video, reel, clip' },
+    { id:'admin', name:'סידורים', color:'#c9a000', g:'5', kw:'רכב, מוסך, טסט, בנק, מס, מסים, מיסים, רשות המסים, דרכון, ביטוח, תשלום, לשלם, סידורים, car, bank, tax, passport, insurance, pay' },
   ];
 }
 const NEUTRAL = '#8e8e93';
@@ -78,14 +79,30 @@ function kwMatches(kw, title, words){
   return false;
 }
 const catCache = new Map();
+const POSTER_CAT_IDS = ['important','sport','work','personal'];
 function categoryOf(title){
-  title = (title || '').toLowerCase();
-  if (catCache.has(title)) return catCache.get(title);
-  const words = title.split(/[\s,.\-–:;!?()\[\]/\\|+]+/).map(normWord).filter(Boolean);
+  const key = (title || '').toLowerCase();
+  if (catCache.has(key)) return catCache.get(key);
   let found = null;
-  for (const c of S.cats){ if (c.kw.split(',').some(k => kwMatches(k, title, words))){ found = c; break; } }
-  catCache.set(title, found); return found;
+  const autoId = (typeof autoCategoryId === 'function') ? autoCategoryId(title) : null;
+  if (autoId) found = S.cats.find(c => c.id === autoId) || null;
+  if (!found){
+    const words = key.split(/[\s,.\-–:;!?()\[\]/\\|+]+/).map(normWord).filter(Boolean);
+    for (const c of S.cats){
+      if (POSTER_CAT_IDS.indexOf(c.id) >= 0 || c.id === 'study' || c.id === 'content' || c.id === 'admin') continue;
+      if (c.kw.split(',').some(k => kwMatches(k, key, words))){ found = c; break; }
+    }
+  }
+  catCache.set(key, found); return found;
 }
+function ensureBuiltInCats(){
+  let changed = false;
+  for (const d of defaultCats()){
+    if (!S.cats.some(c => c.id === d.id)){ S.cats.unshift(d); changed = true; }
+  }
+  if (changed) saveCats();
+}
+ensureBuiltInCats();
 function catOfEvent(ev){
   if (ev.cat){ const c = S.cats.find(c => c.id === ev.cat); if (c) return c; }
   return categoryOf(ev.title);
@@ -293,6 +310,19 @@ async function sync(opts = {}){
   } finally {
     S.syncing = false; render(); scheduleNotifications();
   }
+}
+function setEventCategory(id, catId){
+  const ev = S.events[id];
+  if (!ev) return;
+  if (ev.readOnly){ toast('יומן לקריאה בלבד'); return; }
+  ev.cat = catId || null;
+  ev.pending = true;
+  S.events[id] = ev;
+  saveEvents();
+  queue('update', ev);
+  render();
+  scheduleNotifications();
+  if (S.connected) sync();
 }
 function queue(kind, ev){
   if (kind === 'update' && S.ops.some(o => o.id === ev.id && o.kind === 'create')) { saveOps(); return; }
@@ -606,9 +636,6 @@ function applyPosterTheme(){
   root.style.setProperty('--wkend', t.wkend);
   root.style.setProperty('--pline', t.line);
   root.style.setProperty('--paper', t.paper);
-  root.style.setProperty('--n-work', t.work);
-  root.style.setProperty('--n-sport', t.sport);
-  root.style.setProperty('--n-other', t.other);
   root.style.setProperty('--wrap', t.wrap);
   document.body.classList.toggle('poster-dark', !!t.dark);
   const meta = document.querySelector('meta[name="theme-color"]');
