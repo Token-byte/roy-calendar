@@ -113,9 +113,11 @@ function measure(){
 function fitTitle(){
   const el = $('yTitle');
   if (!el) return;
-  const max = el.parentElement.clientWidth;
+  const bar = el.parentElement;
+  const used = [...bar.children].filter(n => n !== el).reduce((s, n) => s + n.offsetWidth, 0);
+  const max = Math.max(40, bar.clientWidth - used - 12);
   if (max < 20) return;
-  let fs = 30;
+  let fs = 28;
   el.style.fontSize = fs + 'px';
   let guard = 0;
   while (el.scrollWidth > max && fs > 11 && guard++ < 50){
@@ -146,7 +148,9 @@ function updateChrome(){
     $('yZTitle').innerHTML = EN_M[m] + ' ' + Y.year + '<small>' + HE_MONTHS[m] + '</small>';
   }
   const sheetOpen = !$('ySheet').classList.contains('hidden');
-  $('fab').style.visibility = (S.view === 'year' && sheetOpen) ? 'hidden' : '';
+  const showFloat = S.view === 'year' && !sheetOpen;
+  $('fab').style.visibility = showFloat ? '' : 'hidden';
+  if ($('micBtn')) $('micBtn').style.visibility = showFloat ? '' : 'hidden';
 }
 
 function buildGrid(){
