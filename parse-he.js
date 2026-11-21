@@ -141,9 +141,12 @@
   }
 
   function applyPeriod(hour, minute, period){
-    if (period === 'בערב' || period === 'בלילה'){
+    if (period === 'בערב'){
       if (hour >= 1 && hour <= 7) hour += 12;
-      if (period === 'בלילה' && hour === 12) hour = 0;
+    }
+    if (period === 'בלילה'){
+      if (hour >= 8 && hour <= 11) hour += 12;
+      if (hour === 12) hour = 0;
     }
     if (period === 'בצהריים' || period === 'בצהרים'){
       if (hour >= 1 && hour <= 7) hour += 12;
