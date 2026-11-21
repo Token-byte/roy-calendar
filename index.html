@@ -12,12 +12,15 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Varela+Round&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <script src="config.js"></script>
 </head>
 <body>
 <div id="app">
-  <header class="top">
+  <header class="top" id="topbar">
     <h1 id="title">—</h1>
     <div class="top-actions">
       <button class="nav-btn" id="btnPrev" aria-label="הקודם">›</button>
@@ -29,7 +32,60 @@
   <div id="banner" class="banner hidden"></div>
 
   <main id="views">
-    <section id="monthView" class="view">
+    <section id="yearView" class="view">
+      <div class="y-top" id="yTop">
+        <div id="yChrome">
+          <button type="button" class="y-arrow" id="yPrev" aria-label="שנה קודמת">›</button>
+          <div class="y-titlewrap">
+            <div class="y-title" id="yTitle" lang="en">THE BIG SHABBAT CALENDAR</div>
+            <div class="y-legend">
+              <span><i class="work"></i>עבודה ופגישות</span>
+              <span><i class="sport"></i>ספורט</span>
+              <span><i class="other"></i>אחר</span>
+            </div>
+          </div>
+          <button type="button" class="y-arrow" id="yNext" aria-label="שנה הבאה">‹</button>
+          <button type="button" class="y-gear" id="ySettings" aria-label="הגדרות"><svg viewBox="0 0 24 24" width="20" height="20"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+        </div>
+        <div id="yZoombar" class="hidden" dir="ltr">
+          <div class="y-zbtns">
+            <button type="button" id="yMinus" aria-label="התרחקות">−</button>
+            <span id="yZLabel">×1</span>
+            <button type="button" id="yPlus" aria-label="התקרבות">+</button>
+          </div>
+          <div class="y-ztitle" id="yZTitle" lang="en"></div>
+          <button type="button" id="yAll">כל השנה
+            <svg width="9" height="14" viewBox="0 0 9 14" aria-hidden="true"><path d="M2 1l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="y-stage" dir="ltr">
+        <div class="y-labels" id="yLabels"></div>
+        <div class="y-vp" id="yVp">
+          <div class="y-world" id="yWorld"></div>
+        </div>
+      </div>
+      <div class="y-foot">
+        <div class="y-foot-start">
+          <button type="button" id="yToday">היום</button>
+          <button type="button" id="yPlus2" aria-label="התקרבות">+</button>
+        </div>
+        <span id="yHint">צבוט כדי להתקרב ולקרוא את הפתקים</span>
+      </div>
+      <div class="ysheet hidden" id="ySheet" aria-hidden="true">
+        <button type="button" class="ysheet-handle" id="ySheetHandle" aria-label="סגירה"></button>
+        <div class="ysheet-head">
+          <div>
+            <div class="ysheet-day" id="ySheetDay"></div>
+            <div class="ysheet-sub" id="ySheetSub"></div>
+          </div>
+          <div class="ysheet-num" id="ySheetNum"></div>
+        </div>
+        <div class="ysheet-list" id="ySheetList"></div>
+        <button type="button" class="ysheet-add" id="ySheetAdd">+ פתק חדש ליום הזה</button>
+      </div>
+    </section>
+    <section id="monthView" class="view hidden">
       <div class="weekdays" id="weekdays"></div>
       <div class="grid" id="grid"></div>
       <div class="day-panel" id="dayPanel"></div>
@@ -45,7 +101,8 @@
   </main>
 
   <nav class="tabs">
-    <button data-view="month" class="active">חודש</button>
+    <button data-view="year" class="active">שנה</button>
+    <button data-view="month">חודש</button>
     <button data-view="day">יום</button>
     <button data-view="list">רשימה</button>
   </nav>
@@ -170,6 +227,7 @@
 </div>
 
 <div class="toast hidden" id="toast"></div>
+<script src="year.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

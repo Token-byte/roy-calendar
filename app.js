@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '2.0.0';
+const VERSION = '2.1.0';
 const CFG = window.APP_CONFIG || {};
 const TZ = CFG.TIME_ZONE || 'Asia/Jerusalem';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly';
@@ -25,7 +25,7 @@ const S = {
   settings: Object.assign({ defaultReminder: 15, emailReminder: false, gColor: true }, LS.get('settings', {})),
   cats: LS.get('cats', null) || defaultCats(),
   fired: LS.get('fired', {}),
-  view: 'month',
+  view: 'year',
   sel: todayKey(),
   cursor: null, // first day of displayed month
   syncing: false,
@@ -274,7 +274,16 @@ async function sync(opts = {}){
   try {
     if (!S.calendars.length || opts.calendars || Date.now() - lastFullSync > 30*60000){ await loadCalendars(); lastFullSync = Date.now(); }
     await flushOps();
-    const from = addMonths(S.cursor, -1), to = addMonths(S.cursor, 3);
+    let from, to;
+    if (opts.from && opts.to){ from = opts.from; to = opts.to; }
+    else if (S.view === 'year' && typeof displayedYear === 'function'){
+      const y = displayedYear();
+      from = y + '-01-01';
+      to = (y + 1) + '-01-01';
+    } else {
+      from = addMonths(S.cursor, -1);
+      to = addMonths(S.cursor, 3);
+    }
     await fetchRange(from, to);
     LS.set('lastSync', Date.now());
   } catch(e){
@@ -301,16 +310,28 @@ const $ = (id) => document.getElementById(id);
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 function render(){
+  document.body.classList.toggle('view-year', S.view === 'year');
+  $('topbar').classList.toggle('hidden', S.view === 'year');
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('active', b.dataset.view === S.view));
+  $('yearView').classList.toggle('hidden', S.view !== 'year');
   $('monthView').classList.toggle('hidden', S.view !== 'month');
   $('dayView').classList.toggle('hidden', S.view !== 'day');
   $('listView').classList.toggle('hidden', S.view !== 'list');
   const titleKey = S.view === 'month' ? S.cursor : S.sel;
   const td = parseKey(titleKey);
-  $('title').innerHTML = esc(HE_MONTHS[td.getMonth()]) + (td.getFullYear() !== new Date().getFullYear() ? '<small>' + td.getFullYear() + '</small>' : '');
-  if (S.view === 'month') renderMonth();
+  if (S.view === 'year'){
+    const y = td.getFullYear();
+    $('title').textContent = String(y);
+    document.title = 'THE BIG SHABBAT CALENDAR ' + y;
+  } else {
+    document.title = 'יומן';
+    $('title').innerHTML = esc(HE_MONTHS[td.getMonth()]) + (td.getFullYear() !== new Date().getFullYear() ? '<small>' + td.getFullYear() + '</small>' : '');
+  }
+  if (S.view === 'year' && typeof renderYear === 'function') renderYear();
+  else if (S.view === 'month') renderMonth();
   else if (S.view === 'day') renderDay();
   else renderList();
+  if (S.view !== 'year' && typeof yearOnHide === 'function') yearOnHide();
   renderBanner();
 }
 function renderWeekdays(){
@@ -443,7 +464,13 @@ function maybeFetchForCursor(){
   if (fetchedMonths.has(S.cursor)) return;
   fetchedMonths.add(S.cursor); sync();
 }
-function setView(v){ S.view = v; if (v === 'month') S.cursor = firstOfMonth(S.sel); render(); }
+function setView(v){
+  const prev = S.view;
+  S.view = v;
+  if (v === 'month') S.cursor = firstOfMonth(S.sel);
+  render();
+  if (v === 'year' && prev !== 'year') sync();
+}
 
 /* ---------- editor ---------- */
 let editing = null, edCat = null;
@@ -654,6 +681,7 @@ function maybeShowInstall(){
 
 /* ---------- wiring ---------- */
 function bind(){
+  if (typeof initYear === 'function') initYear();
   renderWeekdays();
   $('btnPrev').onclick = () => go(-1);
   $('btnNext').onclick = () => go(1);
@@ -742,7 +770,10 @@ function bind(){
 
   window.addEventListener('online', () => { renderBanner(); sync(); });
   window.addEventListener('offline', renderBanner);
-  window.addEventListener('resize', () => { if (S.view === 'month') renderMonth(); });
+  window.addEventListener('resize', () => {
+    if (S.view === 'month') renderMonth();
+    else if (S.view === 'year' && typeof renderYear === 'function') renderYear();
+  });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible'){
       if (S.sel !== todayKey() && lastVisibleToday !== todayKey()){ S.sel = todayKey(); S.cursor = firstOfMonth(S.sel); }
@@ -761,7 +792,7 @@ if ('serviceWorker' in navigator){
 bind();
 maybeShowInstall();
 // deep link ?d=YYYY-MM-DD&view=day
-(() => { const p = new URLSearchParams(location.search); const d = p.get('d'); if (d && /^\d{4}-\d\d-\d\d$/.test(d)){ S.sel = d; S.cursor = firstOfMonth(d); } const v = p.get('view'); if (['month','day','list'].includes(v)) S.view = v; })();
+(() => { const p = new URLSearchParams(location.search); const d = p.get('d'); if (d && /^\d{4}-\d\d-\d\d$/.test(d)){ S.sel = d; S.cursor = firstOfMonth(d); } const v = p.get('view'); if (['year','month','day','list'].includes(v)) S.view = v; })();
 render();
 requestAnimationFrame(() => render());
 fetchedMonths.add(S.cursor);
