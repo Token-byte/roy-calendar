@@ -31,10 +31,15 @@ function displayedYear(){ return Y.year || parseKey(S.sel).getFullYear(); }
 function noteKind(ev){
   const c = catOfEvent(ev);
   if (!c) return 'other';
-  if (c.id === 'sport') return 'sport';
-  if (c.id === 'work') return 'work';
+  if (c.id === 'sport' || c.id === 'work' || c.id === 'personal' || c.id === 'important') return c.id;
   return 'other';
 }
+const SHEET_CATS = [
+  { id:'work', name:'עבודה' },
+  { id:'sport', name:'ספורט' },
+  { id:'personal', name:'אישי' },
+  { id:'important', name:'חשוב' },
+];
 function eventTimeLabel(ev, dayKey){
   if (ev.allDay) return 'כל היום';
   const startKey = keyOf(new Date(evStartMs(ev)));
@@ -477,6 +482,7 @@ function goToday(){
   if (sheetWasOpen) selectDay(k, true);
 }
 
+let sheetOpenedAt = 0;
 function openSheet(k){
   const evs = eventsForDay(k);
   $('ySheetDay').textContent = fmtLong(k);
@@ -487,21 +493,91 @@ function openSheet(k){
   else list.innerHTML = evs.map(ev => {
     const tm = eventTimeLabel(ev, k) || (ev.allDay ? 'כל היום' : '');
     const sub = ev.location ? '<small>' + esc(ev.location) + '</small>' : '';
-    return '<button type="button" class="y-item" data-id="' + esc(ev.id) + '"><i class="' + noteKind(ev) + '"></i><span class="y-tm">' + esc(tm) + '</span><span class="y-bd"><b>' + esc(ev.title) + '</b>' + sub + '</span></button>';
+    const kind = noteKind(ev);
+    const chips = SHEET_CATS.map(c => '<button type="button" class="' + c.id + (ev.cat === c.id ? ' on' : '') + '" data-setcat="' + c.id + '">' + c.name + '</button>').join('')
+      + '<button type="button" class="auto' + (!ev.cat ? ' on' : '') + '" data-setcat="">אוטו</button>';
+    return '<div class="y-ev" data-id="' + esc(ev.id) + '"><button type="button" class="y-item"><i class="' + kind + '"></i><span class="y-tm">' + esc(tm) + '</span><span class="y-bd"><b>' + esc(ev.title) + '</b>' + sub + '</span></button><div class="y-setcats">' + chips + '</div></div>';
   }).join('');
-  $('ySheet').classList.remove('hidden');
-  $('ySheet').setAttribute('aria-hidden', 'false');
+  const sheet = $('ySheet');
+  sheetOpenedAt = Date.now();
+  sheet.style.transform = '';
+  sheet.classList.remove('hidden');
+  sheet.setAttribute('aria-hidden', 'false');
+  const back = $('ySheetBack');
+  if (back) back.classList.remove('hidden');
   updateChrome();
 }
 function closeSheet(){
   Y.selected = null;
   const sheet = $('ySheet');
   if (sheet){
+    sheet.style.transform = '';
     sheet.classList.add('hidden');
     sheet.setAttribute('aria-hidden', 'true');
   }
+  const back = $('ySheetBack');
+  if (back) back.classList.add('hidden');
   layoutSelection();
   if ($('fab')) updateChrome();
+}
+function bindSheetDismiss(){
+  const sheet = $('ySheet');
+  const handle = $('ySheetHandle');
+  const head = sheet.querySelector('.ysheet-head');
+  const back = $('ySheetBack');
+  let startY = 0, dy = 0, dragging = false, suppressClick = false;
+  function pointY(e){ return e.touches ? e.touches[0].clientY : e.clientY; }
+  function onStart(e){
+    if (e.target.closest('.ysheet-list, .ysheet-add, .y-setcats')) return;
+    dragging = true;
+    startY = pointY(e);
+    dy = 0;
+    sheet.style.transition = 'none';
+  }
+  function onMove(e){
+    if (!dragging) return;
+    dy = Math.max(0, pointY(e) - startY);
+    if (dy > 0 && e.cancelable) e.preventDefault();
+    sheet.style.transform = 'translateY(' + dy + 'px)';
+  }
+  function onEnd(){
+    if (!dragging) return;
+    dragging = false;
+    if (dy > 70){
+      suppressClick = true;
+      sheet.style.transition = 'transform .2s ease';
+      sheet.style.transform = 'translateY(110%)';
+      setTimeout(closeSheet, 180);
+    } else {
+      sheet.style.transition = 'transform .2s ease';
+      sheet.style.transform = '';
+    }
+    dy = 0;
+  }
+  [handle, head].forEach(el => {
+    if (!el) return;
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchend', onEnd);
+    el.addEventListener('touchcancel', onEnd);
+    el.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') return; onStart(e); });
+    el.addEventListener('pointermove', e => { if (!dragging || e.pointerType === 'touch') return; onMove(e); });
+    el.addEventListener('pointerup', e => { if (e.pointerType === 'touch') return; onEnd(); });
+  });
+  handle.addEventListener('click', e => {
+    if (suppressClick){ suppressClick = false; e.preventDefault(); return; }
+    closeSheet();
+  });
+  function dismissFromBackdrop(e){
+    if (Date.now() - sheetOpenedAt < 450) return;
+    if (e && e.cancelable) e.preventDefault();
+    closeSheet();
+  }
+  if (back){
+    back.addEventListener('click', dismissFromBackdrop);
+    back.addEventListener('touchend', dismissFromBackdrop);
+    back.addEventListener('touchmove', e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
+  }
 }
 function revealDay(k){
   if (Y.scale <= 1.05) return;
@@ -699,8 +775,14 @@ function initYear(){
   $('yNext').onclick = () => shiftYear(1);
   $('ySettings').onclick = openSettings;
   $('ySheetAdd').onclick = () => openEditor(null, Y.selected || S.sel);
-  $('ySheetHandle').onclick = closeSheet;
+  bindSheetDismiss();
   $('ySheetList').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-setcat]');
+    if (chip){
+      const row = chip.closest('[data-id]');
+      if (row) setEventCategory(row.dataset.id, chip.dataset.setcat);
+      return;
+    }
     const b = e.target.closest('[data-id]');
     if (!b) return;
     const ev = S.events[b.dataset.id];
