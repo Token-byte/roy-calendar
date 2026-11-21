@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '2.3.0';
+const VERSION = '2.3.1';
 const CFG = window.APP_CONFIG || {};
 const TZ = CFG.TIME_ZONE || 'Asia/Jerusalem';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly';
