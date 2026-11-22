@@ -1,10 +1,10 @@
 {
-  "updatedAt": "2026-11-22T14:10:25.631333+02:00",
+  "updatedAt": "2026-11-22T22:35:17.350819+02:00",
   "sources": [
     {
       "id": "makore",
       "ok": true,
-      "count": 31,
+      "count": 33,
       "error": null
     },
     {
@@ -117,7 +117,7 @@
       "price": "150.00"
     },
     {
-      "title": "רוקדים לנצח מסיבת ריקודים עם ירון מידן בהדר המושבות",
+      "title": "חוגגים 40 שנה לריקודי ירון מידן בהדר המושבות",
       "start": "2026-11-26T19:00:00Z",
       "venue": "הדר המושבות",
       "city": "פתח תקווה",
@@ -401,6 +401,28 @@
       "url": "https://www.makore.co.il/event/e11c4cb9e3f239b09925129f0ab600f036043cf45c2edca271ef764784bf1af3",
       "source": "makore",
       "price": "50.00"
+    },
+    {
+      "title": "באנו חושך לגרש, דרינק ביד יש - סיור ברים לחנוכה",
+      "start": "2026-12-02T17:45:00Z",
+      "venue": "בר יין ופסטה",
+      "city": "רמת גן",
+      "lat": 32.0684,
+      "lon": 34.8248,
+      "url": "https://www.makore.co.il/event/331818d2a8e38b9a57452290e9150c00a48bed0d03533492638765a01929db97",
+      "source": "makore",
+      "price": null
+    },
+    {
+      "title": "\"להאיר את האור שבך\" מסיבת חנוכה לנשים במועדון הגולה",
+      "start": "2026-12-02T18:30:00Z",
+      "venue": "גולה",
+      "city": "פתח תקווה",
+      "lat": 32.084,
+      "lon": 34.8878,
+      "url": "https://www.makore.co.il/event/629323de3688a6f68c861acc6039a6fed03c98234e786e772ed9f258c7e94eae",
+      "source": "makore",
+      "price": null
     }
   ]
 }
