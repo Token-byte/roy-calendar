@@ -1,16 +1,16 @@
 {
-  "updatedAt": "2026-11-21T22:22:46.864891+02:00",
+  "updatedAt": "2026-11-22T14:10:25.631333+02:00",
   "sources": [
     {
       "id": "makore",
       "ok": true,
-      "count": 30,
+      "count": 31,
       "error": null
     },
     {
       "id": "tickchak",
       "ok": true,
-      "count": 0,
+      "count": 2,
       "error": null
     },
     {
@@ -23,7 +23,7 @@
       "id": "eventbrite",
       "ok": false,
       "count": 0,
-      "error": "RuntimeError: no JSON-LD events"
+      "error": "HTTPError: HTTP Error 405: Not Allowed"
     },
     {
       "id": "tixwise",
@@ -293,6 +293,28 @@
       "price": null
     },
     {
+      "title": "הרקדה שבועית בחוף גורדון",
+      "start": "2026-11-28T17:00:00Z",
+      "venue": "טיילת שלמה להט, חוף גורדון יהודה ליב, תל אביב - יפו להצגת מיקום על גבי מפה >>",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/8174f428994d3e242b08f8ee3168b02bba73035daa237aeeec3261623a4c7f70",
+      "source": "makore",
+      "price": null
+    },
+    {
+      "title": "עמרי סמדר X להקת מחול ליאור תבורי | DRIFT",
+      "start": "2026-11-28T18:00:00+02:00",
+      "venue": "בית תמי - מרכז קהילתי לב תל-אביב",
+      "city": "תל אביב",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.eventer.co.il/smadarxtavori",
+      "source": "tickchak",
+      "price": "130.00"
+    },
+    {
       "title": "סבב ברים שמח בתל אביב!!!🍻",
       "start": "2026-11-28T20:00:00Z",
       "venue": "יהודה לוי 47 (צ'ופיטוס בר)",
@@ -302,6 +324,17 @@
       "url": "https://www.makore.co.il/event/bfe9f5e4b1a8ede5b8c8a16598f2f42579010479a281690485a9dd84a3c9a2a7",
       "source": "makore",
       "price": "80"
+    },
+    {
+      "title": "עמרי סמדר X להקת מחול ליאור תבורי | DRIFT",
+      "start": "2026-11-28T20:30:00+02:00",
+      "venue": "בית תמי - מרכז קהילתי לב תל-אביב",
+      "city": "תל אביב",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.eventer.co.il/smadarxtavori2030",
+      "source": "tickchak",
+      "price": "130.00"
     },
     {
       "title": "BUBBLES x ASHER SWISSA x KINO TODO | FOREVER IN MOTION | 28.11 | 22:30",
