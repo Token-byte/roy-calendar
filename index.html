@@ -240,12 +240,35 @@
         </select>
       </label>
       <label class="row"><span>גם מייל תזכורת מגוגל</span><input type="checkbox" id="stEmailReminder" class="switch"></label>
+      <button class="secondary" id="stYearbook">השנה שלי</button>
       <button class="secondary" id="stNotif">הפעלת התראות</button>
       <button class="secondary" id="stTestNotif">התראת בדיקה</button>
       <p class="muted small" id="stNotifStatus"></p>
     </div>
     <button class="link small" id="stShowInstall">איך מתקינים באייפון</button>
     <p class="muted small">גרסה <span id="stVersion"></span></p>
+  </div>
+</div>
+
+<div class="sheet-backdrop hidden" id="yearBackdrop">
+  <div class="sheet" id="yearSheet"></div>
+</div>
+<div class="sheet-backdrop hidden" id="wordBackdrop">
+  <form class="sheet" id="wordSheet">
+    <div class="sheet-head">
+      <button type="button" class="link" id="wordSkip">אחר כך</button>
+      <strong>לשיתוף</strong>
+      <button type="submit" class="link strong">שמירה</button>
+    </div>
+    <label class="stack"><span>מילה לשנה</span><input id="wordYear" class="input" maxlength="24" placeholder="מילה אחת"></label>
+    <label class="stack"><span>יעד לשנה הבאה</span><input id="wordGoal" class="input" maxlength="80" placeholder="יעד אחד"></label>
+  </form>
+</div>
+<div class="story-back hidden" id="storyBack">
+  <div class="story" id="storyCard"></div>
+  <div class="story-actions">
+    <button type="button" id="storyClose">סגירה</button>
+    <button type="button" id="storyShare">שתף תמונה</button>
   </div>
 </div>
 
@@ -277,6 +300,9 @@
 <script src="parse-he.js"></script>
 <script src="cats-auto.js"></script>
 <script src="holidays.js"></script>
+<script src="places.js"></script>
+<script src="wrap-extra.js"></script>
+<script src="yearbook.js"></script>
 <script src="sync-keep.js"></script>
 <script src="google-auth.js"></script>
 <script src="year.js"></script>
