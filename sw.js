@@ -1,4 +1,4 @@
-const CACHE = 'roy-cal-v2.3.4';
+const CACHE = 'roy-cal-v2.3.5';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'year.js', 'parse-he.js', 'cats-auto.js', 'sync-keep.js', 'google-auth.js', 'wrap.js', 'voice.js', 'config.js', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-512-maskable.png',
   'apple-touch-icon-v3.png', 'apple-touch-icon.png', 'apple-touch-icon-precomposed.png'];

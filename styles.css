@@ -31,6 +31,7 @@ a{color:var(--blue)}
 .banner{margin:0 16px 8px;padding:9px 12px;border-radius:12px;background:#fff4d6;font-size:13.5px;display:flex;gap:10px;align-items:center;justify-content:space-between;color:#14234f;line-height:1.35}
 .banner span{flex:1}
 .banner button{font-weight:700;color:#1F3FA8;white-space:nowrap}
+.banner.ok{background:#e7f8ee;color:#0f6b45}
 .warn{background:#fff4d6;color:#14234f;border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.4;margin:0}
 .warn button{font-weight:700;color:#1F3FA8}
 main{flex:1;overflow:hidden;position:relative}
