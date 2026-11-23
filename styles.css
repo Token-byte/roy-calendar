@@ -3,7 +3,7 @@
   --accent:#ff3b30; --blue:#0a84ff;
   --tabh:52px; --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
   --ink:#1F3FA8; --wkend:#A9CFEF; --pline:#9DB3D9; --paper:#fff;
-  --n-work:#A9C7FF; --n-sport:#FF8B84; --n-personal:#7DDBA3; --n-important:#C9B0FF; --n-other:#FFE978;
+  --n-work:#A9C7FF; --n-study:#C9B0FF; --n-sport:#FF8B84; --n-travel:#7EE0E8; --n-family:#7DDBA3; --n-admin:#F0B45A; --n-culture:#FFB4E0; --n-other:#FFE978; --n-important:#B794F6; --n-chag:#E6E0F4; --n-personal:#7DDBA3;
   --wrap:#1F3FA8;
 }
 @media (prefers-color-scheme: dark){
@@ -167,21 +167,26 @@ body.view-year #app,body.view-wrap #app{background:var(--paper,#fff)}
   min-height:0; position:relative;
   padding-bottom:var(--safe-b);
 }
-.y-top{position:relative;height:98px;flex:none;padding:4px 8px 0}
+.y-top{position:relative;height:118px;flex:none;padding:4px 8px 0}
 #yChrome,#yZoombar{position:absolute;inset:0}
 #yZoombar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 10px;background:var(--paper,#fff)}
 #yChrome{direction:rtl;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:2px 8px 0}
 .y-titlebar{display:flex;align-items:center;gap:6px;min-width:0}
 .y-title{flex:1;min-width:0;text-align:center;font-family:'Anton',Impact,'Arial Narrow',sans-serif;font-weight:400;letter-spacing:.2px;line-height:1;white-space:nowrap;color:var(--ink);overflow:hidden}
 .y-subbar{display:flex;align-items:center;gap:4px}
-.y-legend{flex:1;display:flex;justify-content:center;flex-wrap:wrap;gap:6px 8px;direction:rtl;font-size:11px;color:var(--ink);min-width:0}
+.y-legend{flex:1;display:flex;justify-content:center;flex-wrap:wrap;gap:3px 7px;direction:rtl;font-size:10px;color:var(--ink);min-width:0;line-height:1.25}
 .y-legend span{display:flex;align-items:center;gap:4px;white-space:nowrap}
 .y-legend i{width:11px;height:11px;display:inline-block;border-radius:1px 1px 2px 5px;box-shadow:0 1px 2px rgba(0,0,0,.25);flex:none}
 .y-legend i.work,.ynote.work,.y-item i.work{background:var(--n-work)}
+.y-legend i.study,.ynote.study,.y-item i.study{background:var(--n-study)}
 .y-legend i.sport,.ynote.sport,.y-item i.sport{background:var(--n-sport)}
-.y-legend i.personal,.ynote.personal,.y-item i.personal{background:var(--n-personal)}
-.y-legend i.important,.ynote.important,.y-item i.important{background:var(--n-important)}
+.y-legend i.travel,.ynote.travel,.y-item i.travel{background:var(--n-travel)}
+.y-legend i.family,.ynote.family,.y-item i.family,.y-legend i.personal,.ynote.personal,.y-item i.personal{background:var(--n-family)}
+.y-legend i.admin,.ynote.admin,.y-item i.admin{background:var(--n-admin)}
+.y-legend i.culture,.ynote.culture,.y-item i.culture{background:var(--n-culture)}
 .y-legend i.other,.ynote.other,.y-item i.other{background:var(--n-other)}
+.y-legend i.important,.ynote.important,.y-item i.important{background:var(--n-important)}
+.y-legend i.chag,.ynote.chag,.y-item i.chag{background:var(--n-chag)}
 .y-arrow{font-size:22px;line-height:1;width:32px;height:32px;color:var(--ink);flex:none}
 .y-gear{width:40px;height:40px;color:var(--ink);display:flex;align-items:center;justify-content:center;flex:none}
 .y-gear svg{fill:currentColor}
@@ -250,8 +255,11 @@ body.view-year #app,body.view-wrap #app{background:var(--paper,#fff)}
 .y-setcats{display:flex;flex-wrap:wrap;gap:4px;padding:0 0 8px}
 .y-setcats button{font-size:11px;padding:3px 8px;border-radius:10px;border:1px solid #E3E8F5;color:#5c6a94;background:#fff}
 .y-setcats button.on{color:#14234f;font-weight:700;border-color:transparent}
-.y-setcats button.work.on{background:var(--n-work)} .y-setcats button.sport.on{background:var(--n-sport)}
-.y-setcats button.personal.on{background:var(--n-personal)} .y-setcats button.important.on{background:var(--n-important)}
+.y-setcats button.work.on{background:var(--n-work)} .y-setcats button.study.on{background:var(--n-study)}
+.y-setcats button.sport.on{background:var(--n-sport)} .y-setcats button.travel.on{background:var(--n-travel)}
+.y-setcats button.family.on{background:var(--n-family)} .y-setcats button.admin.on{background:var(--n-admin)}
+.y-setcats button.culture.on{background:var(--n-culture)} .y-setcats button.other.on{background:var(--n-other)}
+.y-setcats button.personal.on{background:var(--n-family)} .y-setcats button.important.on{background:var(--n-important)}
 .y-setcats button.auto.on{background:#E8E8ED}
 .y-tm{font-family:'Anton',Impact,sans-serif;font-size:18px;color:var(--ink);width:58px;direction:ltr;text-align:right;flex:none;font-weight:400}
 .y-bd{flex:1;min-width:0}

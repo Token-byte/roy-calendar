@@ -31,6 +31,7 @@ function rangeFor(span){
 function collectWrap(span){
   const range = rangeFor(span);
   const events = Object.values(S.events).filter(ev => {
+    if (onHolidayCalendar(ev)) return false;
     const k = evStartKey(ev);
     return k && k >= range.from && k < range.to;
   });
@@ -88,7 +89,7 @@ function renderWrap(){
   } else {
     const subs = [s.climb ? s.climb + ' טיפוס' : '', s.run ? s.run + ' ריצה' : ''].filter(Boolean).join(' · ');
     const bar = s.cats.slice(0, 3).map(c => {
-      const color = c.id === 'sport' ? 'var(--n-sport)' : c.id === 'work' ? 'var(--n-work)' : 'var(--n-other)';
+      const color = 'var(--n-' + (c.id || 'other') + ')';
       return `<i style="width:${Math.max(4, Math.round(c.n / s.total * 100))}%;background:${color}"></i>`;
     }).join('');
     const topLabel = s.top ? esc(s.top.name) + ' ' + s.topPct + '%' : '';
