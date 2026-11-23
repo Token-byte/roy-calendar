@@ -1,8 +1,8 @@
 'use strict';
-const VERSION = '2.3.4';
+const VERSION = '2.3.5';
 const CFG = window.APP_CONFIG || {};
 const TZ = CFG.TIME_ZONE || 'Asia/Jerusalem';
-const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly';
+const SCOPES = 'https://www.googleapis.com/auth/calendar';
 const API = 'https://www.googleapis.com/calendar/v3';
 const HE_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 const HE_DAYS = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
@@ -187,7 +187,20 @@ function toGoogle(ev){
 
 /* ---------- Google auth ---------- */
 let tokenClient = null, gisLoading = null;
-function clientId(){ return (CFG.GOOGLE_CLIENT_ID || LS.get('clientId','') || '').trim(); }
+function clientId(){
+  const choice = GoogleAuth.resolveClientId(CFG.GOOGLE_CLIENT_ID, LS.get('clientId', ''), LS.get('clientIdUserSet', false));
+  if (choice.replaceStored) LS.set('clientId', choice.id);
+  return choice.id;
+}
+function migrateClientId(){
+  const before = (LS.get('clientId', '') || '').trim();
+  const id = clientId();
+  if (before && before !== id){
+    S.token = null; S.connected = false;
+    LS.del('gtoken'); LS.set('connected', false); LS.del('oauthVia');
+  }
+}
+migrateClientId();
 function tokenValid(){ return S.token && S.token.exp > Date.now() + 60000; }
 function loadGIS(){
   if (window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
@@ -521,8 +534,12 @@ function renderBanner(){
   } else if (S.ops.length){
     msg = 'יש ' + S.ops.length + ' שינויים שעדיין לא נכתבו לגוגל. הם יישלחו שוב אוטומטית.';
     action = 'שליחה'; fn = () => sync({ calendars: true });
+  } else {
+    msg = 'מחובר לגוגל כ-' + accountLabel();
   }
   if (!msg){ b.classList.add('hidden'); return; }
+  const connectedNow = !!(S.connected && tokenValid() && navigator.onLine && !S.ops.length);
+  b.classList.toggle('ok', connectedNow);
   b.innerHTML = `<span>${esc(msg)}</span>${action ? `<button id="bannerBtn">${esc(action)}</button>` : ''}`;
   b.classList.remove('hidden');
   if (fn) $('bannerBtn').onclick = fn;
@@ -715,7 +732,7 @@ function settleChange(id, saved){
   renderBanner();
 }
 function useRedirectAuth(){
-  return typeof isIOS === 'function' && isIOS();
+  return typeof isStandalone === 'function' && isStandalone();
 }
 function randomState(){
   const a = new Uint8Array(16);
@@ -726,9 +743,22 @@ function takeTypedClientId(){
   const el = $('stClientId');
   if (!el) return true;
   const typed = el.value.trim();
-  if (!typed || typed === clientId()) return true;
+  const def = String(CFG.GOOGLE_CLIENT_ID || '').trim();
+  if (!typed || typed === def){
+    if (LS.get('clientIdUserSet', false) || (LS.get('clientId', '') || '') !== def){
+      LS.set('clientId', def);
+      LS.del('clientIdUserSet');
+      tokenClient = null;
+    }
+    if (def && el.value.trim() !== def) el.value = def;
+    return true;
+  }
   if (!/\.apps\.googleusercontent\.com$/.test(typed)){ toast('המפתח צריך להיגמר ב-apps.googleusercontent.com'); return false; }
-  LS.set('clientId', typed); tokenClient = null;
+  if (typed !== clientId()){
+    LS.set('clientId', typed);
+    LS.set('clientIdUserSet', true);
+    tokenClient = null;
+  }
   return true;
 }
 function thisRedirectUri(){
@@ -796,7 +826,7 @@ function renderGoogleSettings(){
   $('stGoogleStatus').textContent = !has ? 'חסר מפתח' : ok ? 'מחובר' : (S.connected ? 'החיבור פג' : 'לא מחובר');
   $('stGoogleExplain').textContent = ok
     ? ('מחובר כ-' + who + '. כל פתק חדש, עריכה, מחיקה וקטגוריה נכתבים ליומן הראשי בגוגל, ואז מגיעים לכל מכשיר שמחובר לאותו חשבון.' + (last ? ' סנכרון אחרון ' + hm(new Date(last)) + '.' : ''))
-    : ('החשבון הוא ' + (CFG.LOGIN_HINT || who) + '. החיבור נשמר רק באפליקציה הזו: האייקון במסך הבית, לשונית בספארי, והמק הם חיבורים נפרדים. בלי חיבור הפתקים נשארים רק כאן.');
+    : ('החשבון הוא ' + (CFG.LOGIN_HINT || who) + '. החיבור נשמר רק באפליקציה הזו. אם גוגל אומרת שהאפליקציה לא מאומתת, לוחצים Advanced ואז Continue (או מתקדם ואז המשך), ואז Allow.');
   $('stConnect').classList.toggle('hidden', ok);
   $('stConnect').textContent = S.connected ? 'חיבור מחדש לגוגל' : 'התחברות לגוגל';
   const upload = $('stUploadLocal');

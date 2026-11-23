@@ -1,10 +1,22 @@
 'use strict';
 const assert = require('assert');
-const { redirectUri, buildGoogleAuthUrl, parseOAuthHash } = require('./google-auth.js');
+const { redirectUri, buildGoogleAuthUrl, parseOAuthHash, resolveClientId } = require('./google-auth.js');
+const CLIENT = '155342303431-bgvi9gq0rgab2s6vtj09f83ge4psbqkv.apps.googleusercontent.com';
 
 assert.strictEqual(redirectUri('https://token-byte.github.io', '/roy-calendar/'), 'https://token-byte.github.io/roy-calendar/');
 assert.strictEqual(redirectUri('https://token-byte.github.io', '/roy-calendar/index.html'), 'https://token-byte.github.io/roy-calendar/');
+assert.strictEqual(redirectUri('https://token-byte.github.io', '/roy-calendar'), 'https://token-byte.github.io/roy-calendar/');
 assert.strictEqual(redirectUri('http://127.0.0.1:8765', '/'), 'http://127.0.0.1:8765/');
+
+const replaced = resolveClientId(CLIENT, 'old.apps.googleusercontent.com', false);
+assert.strictEqual(replaced.id, CLIENT);
+assert.strictEqual(replaced.replaceStored, true);
+const kept = resolveClientId(CLIENT, 'other.apps.googleusercontent.com', true);
+assert.strictEqual(kept.id, 'other.apps.googleusercontent.com');
+assert.strictEqual(kept.replaceStored, false);
+const same = resolveClientId(CLIENT, CLIENT, false);
+assert.strictEqual(same.id, CLIENT);
+assert.strictEqual(same.replaceStored, false);
 
 const url = new URL(buildGoogleAuthUrl({
   clientId: 'abc.apps.googleusercontent.com',

@@ -6,11 +6,20 @@
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.GoogleAuth = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  const PAGES_ORIGIN = 'https://token-byte.github.io';
+  const PAGES_REDIRECT = 'https://token-byte.github.io/roy-calendar/';
   function redirectUri(origin, pathname){
+    if (origin === PAGES_ORIGIN) return PAGES_REDIRECT;
     let path = pathname || '/';
     path = path.replace(/index\.html$/, '');
     if (!path.endsWith('/')) path += '/';
     return origin + path;
+  }
+  function resolveClientId(def, stored, userSet){
+    const d = String(def || '').trim();
+    const s = String(stored || '').trim();
+    if (userSet && s && s !== d) return { id: s, replaceStored: false };
+    return { id: d || s, replaceStored: !!d && s !== d };
   }
   function buildGoogleAuthUrl(o){
     const u = new URL('https://accounts.google.com/o/oauth2/v2/auth');
@@ -36,5 +45,5 @@
       state: q.get('state') || ''
     };
   }
-  return { redirectUri, buildGoogleAuthUrl, parseOAuthHash };
+  return { redirectUri, buildGoogleAuthUrl, parseOAuthHash, resolveClientId, PAGES_REDIRECT };
 });
