@@ -318,6 +318,30 @@ body.view-year #app,body.view-wrap #app{background:var(--paper,#fff)}
 .w-foot{display:flex;justify-content:space-between;align-items:center;margin-top:16px}
 .w-share{background:#fff;color:var(--wrap);border-radius:22px;padding:10px 16px;font-weight:700}
 .w-empty{padding:28px 8px;font-size:16px;line-height:1.5}
+.w-block{margin-top:14px;background:rgba(255,255,255,.08);border-radius:14px;padding:12px 12px 10px}
+.w-k{font-size:13px;color:#d5e4ff;margin-bottom:4px}
+.w-sub{font-size:15px;line-height:1.4;margin-top:2px}
+.w-flags{font-size:26px;letter-spacing:2px;line-height:1.4}
+.w-people,.yb-suggest{display:flex;flex-wrap:wrap;gap:6px}
+.w-person,.yb-suggest button,.yb-row button{background:rgba(255,255,255,.16);color:#fff;border-radius:14px;padding:6px 10px;font-size:14px}
+.w-text{color:#fff;font-weight:700;padding:10px 4px}
+.yb-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(0,0,0,.06)}
+.yb-row span{flex:1;min-width:0}
+.yb-row button{background:var(--soft);color:var(--fg)}
+.yb-add{display:flex;gap:8px;align-items:center}
+.yb-add .input{flex:1}
+.yb-add button,.chk{font-weight:700;color:var(--blue);white-space:nowrap}
+.chk{display:flex;align-items:center;gap:4px}
+.stack{display:flex;flex-direction:column;gap:4px}
+.story-back{position:fixed;inset:0;z-index:80;background:#0c1430;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:12px}
+.story{width:min(92vw,calc(78dvh * 9 / 16));aspect-ratio:9/16;background:#1F3FA8;color:#fff;border-radius:22px;padding:28px 22px;display:flex;flex-direction:column;gap:8px;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,.35)}
+.st-eye{letter-spacing:2px;color:#d5e4ff;font-size:13px}
+.st-big{font-family:'Anton',Impact,sans-serif;font-size:92px;line-height:.85;direction:ltr;text-align:right}
+.st-lbl,.st-row,.st-far,.st-goal{font-size:16px;line-height:1.35}
+.st-flags{font-size:28px;letter-spacing:3px}
+.st-word{margin-top:auto;font-size:34px;font-weight:700}
+.story-actions{display:flex;gap:12px}
+.story-actions button{background:#fff;color:#1F3FA8;border-radius:18px;padding:10px 16px;font-weight:700}
 
 @media (orientation: landscape){
   .y-top{height:48px}

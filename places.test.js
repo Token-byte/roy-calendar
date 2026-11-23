@@ -1,0 +1,20 @@
+'use strict';
+const assert = require('assert');
+const { findPlaces, summarize, haversine, HOME, isHome, flag } = require('./places.js');
+
+const miami = findPlaces('טיסה למיאמי');
+assert.strictEqual(miami[0].city, 'מיאמי');
+assert.strictEqual(miami[0].code, 'US');
+assert.strictEqual(findPlaces('Flight to Miami')[0].city, 'מיאמי');
+assert.strictEqual(findPlaces('Bangkok, Thailand')[0].city, 'בנגקוק');
+assert.strictEqual(findPlaces('הוד השרון')[0].city, 'הוד השרון');
+assert.ok(isHome(findPlaces('הוד השרון')[0]));
+const km = haversine(HOME, { lat: 25.7617, lon: -80.1918 });
+assert.ok(km > 10000 && km < 12000, km);
+const sum = summarize(findPlaces('מיאמי').concat(findPlaces('הוד השרון')).concat(findPlaces('בנגקוק')));
+assert.deepStrictEqual(sum.countries.map(c => c.code).sort(), ['TH', 'US']);
+assert.strictEqual(sum.far.place, 'מיאמי');
+assert.ok(sum.far.km > 10000);
+assert.strictEqual(flag('IL'), '🇮🇱');
+assert.strictEqual(findPlaces('priority rio') .length, 0);
+console.log('places cases passed');

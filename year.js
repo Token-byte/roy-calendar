@@ -73,7 +73,7 @@ function yearMap(year){
   const endMs = dayStartMs(endKey);
   const map = new Map();
   for (const ev of Object.values(S.events)){
-    if (!ev || ev.deleted || !visibleCal(ev.calId) || holidayView(ev).hide) continue;
+    if (!ev || ev.deleted || ev.royKind === 'yearbook' || !visibleCal(ev.calId) || holidayView(ev).hide) continue;
     if (evStartMs(ev) >= endMs || evEndMs(ev) <= startMs) continue;
     let k = ev.allDay ? ev.start : keyOf(new Date(evStartMs(ev)));
     if (k < year + '-01-01') k = year + '-01-01';

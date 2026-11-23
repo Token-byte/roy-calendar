@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '2.3.6';
+const VERSION = '2.3.7';
 const CFG = window.APP_CONFIG || {};
 const TZ = CFG.TIME_ZONE || 'Asia/Jerusalem';
 const SCOPES = 'https://www.googleapis.com/auth/calendar';
@@ -195,7 +195,7 @@ function visibleCal(calId){
 }
 function eventsForDay(k){
   const a = dayStartMs(k), b = dayEndMs(k);
-  return Object.values(S.events).filter(ev => !ev.deleted && visibleCal(ev.calId) && !holidayView(ev, k).hide && evStartMs(ev) < b && evEndMs(ev) > a)
+  return Object.values(S.events).filter(ev => !ev.deleted && ev.royKind !== 'yearbook' && visibleCal(ev.calId) && !holidayView(ev, k).hide && evStartMs(ev) < b && evEndMs(ev) > a)
     .sort((x,y) => (y.allDay - x.allDay) || (evStartMs(x) - evStartMs(y)) || x.title.localeCompare(y.title));
 }
 function fromGoogle(g, cal){
@@ -214,10 +214,16 @@ function fromGoogle(g, cal){
     id: g.id, calId: cal.id, title: g.summary || '(ללא כותרת)', allDay,
     start: allDay ? g.start.date : g.start.dateTime, end: allDay ? g.end.date : g.end.dateTime,
     location: g.location || '', notes: g.description || '', colorId: g.colorId || null,
-    cat: (g.extendedProperties && g.extendedProperties.private && g.extendedProperties.private.royCat) || null,
+    cat: ((g.extendedProperties && g.extendedProperties.private) || {}).royCat || null,
+    royKind: ((g.extendedProperties && g.extendedProperties.private) || {}).royKind || '',
     reminder, recurring: !!g.recurringEventId, readOnly: !['owner','writer'].includes(cal.accessRole),
     link: g.htmlLink || ''
   };
+  if (base.royKind === 'yearbook'){
+    base.readOnly = true;
+    adoptRemoteYearbook(g.description);
+    return base;
+  }
   if (IsraelHolidays.isHolidayCalendar(cal)){
     const h = IsraelHolidays.classifyHoliday(base.title);
     if (!h || !h.show) return null;
@@ -414,6 +420,7 @@ async function sync(opts = {}){
     if (S.ops.length){ enqueueUnsynced(); await flushOps(); }
     LS.set('lastSync', Date.now());
     syncRetries = 0;
+    await syncYearbook();
   } catch(e){
     console.warn('sync', e);
     if (e.code !== 401) toast('שגיאת סנכרון: ' + e.message);
@@ -424,6 +431,60 @@ async function sync(opts = {}){
   } finally {
     S.syncing = false; render(); scheduleNotifications();
   }
+}
+function adoptRemoteYearbook(text){
+  const remote = Yearbook.parse(text);
+  if (!remote) return;
+  const local = Yearbook.normalize(LS.get('yearbook', Yearbook.empty()));
+  const chosen = Yearbook.merge(local, remote);
+  if (chosen.updatedAt !== local.updatedAt) LS.set('yearbook', chosen);
+}
+function yearbookBody(y){
+  return {
+    summary: 'יומן שנה',
+    description: JSON.stringify(Yearbook.normalize(y)),
+    start: { date: '2000-01-01' },
+    end: { date: '2000-01-02' },
+    transparency: 'transparent',
+    visibility: 'private',
+    reminders: { useDefault: false, overrides: [] },
+    extendedProperties: { private: { royKind: 'yearbook', royCat: '' } }
+  };
+}
+let yearbookBusy = false;
+async function syncYearbook(){
+  if (yearbookBusy || !S.connected || !tokenValid() || !clientId()) return;
+  yearbookBusy = true;
+  try {
+    const local = Yearbook.normalize(LS.get('yearbook', Yearbook.empty()));
+    const q = new URLSearchParams({ privateExtendedProperty: 'royKind=yearbook', maxResults: '5', singleEvents: 'true', showDeleted: 'false' });
+    const j = await api('GET', '/calendars/' + encodeURIComponent(primaryCalId()) + '/events?' + q);
+    let remoteEv = null, remote = null;
+    for (const g of (j.items || [])){
+      if (g.status === 'cancelled') continue;
+      const parsed = Yearbook.parse(g.description);
+      if (!parsed) continue;
+      if (!remote || parsed.updatedAt >= remote.updatedAt){ remote = parsed; remoteEv = g; }
+    }
+    const chosen = Yearbook.merge(local, remote);
+    if (remote && chosen.updatedAt === remote.updatedAt && chosen.updatedAt !== local.updatedAt){
+      LS.set('yearbook', chosen);
+      return;
+    }
+    if (!Yearbook.hasContent(chosen)) return;
+    const body = yearbookBody(chosen.updatedAt ? chosen : local);
+    if (remoteEv) await api('PATCH', '/calendars/' + encodeURIComponent(primaryCalId()) + '/events/' + encodeURIComponent(remoteEv.id), body);
+    else await api('POST', '/calendars/' + encodeURIComponent(primaryCalId()) + '/events', body);
+  } catch(e){
+    console.warn('yearbook', e);
+  } finally {
+    yearbookBusy = false;
+  }
+}
+let yearbookTimer = 0;
+function scheduleYearbookPush(){
+  clearTimeout(yearbookTimer);
+  yearbookTimer = setTimeout(() => syncYearbook(), 700);
 }
 function enqueueUnsynced(){
   let changed = false;
@@ -719,7 +780,7 @@ function scheduleNotifications(){
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   const now = Date.now(), horizon = now + 2*86400000;
   for (const ev of Object.values(S.events)){
-    if (!visibleCal(ev.calId)) continue;
+    if (!ev || ev.royKind === 'yearbook' || !visibleCal(ev.calId)) continue;
     const r = reminderFor(ev); if (r == null || r < 0) continue;
     const start = ev.allDay ? dayStartMs(ev.start) + 9*3600000 : evStartMs(ev);
     const at = start - r*60000;
@@ -1072,6 +1133,7 @@ function bind(){
     S.cats = S.cats.filter(c => c.id !== id); saveCats(); renderCatList(); render();
   });
   $('stShowInstall').onclick = () => { $('settingsBackdrop').classList.add('hidden'); showInstall(true); };
+  if ($('stYearbook')) $('stYearbook').onclick = () => { $('settingsBackdrop').classList.add('hidden'); openYearbook(); };
   $('installClose').onclick = () => { LS.set('installDismissed', Date.now()); hideInstall(); };
   $('install').addEventListener('click', e => { if (e.target.id === 'install') { LS.set('installDismissed', Date.now()); hideInstall(); } });
   $('installBtn').onclick = async () => { if (deferredPrompt){ deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; hideInstall(); } };

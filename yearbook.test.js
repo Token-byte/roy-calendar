@@ -1,0 +1,22 @@
+'use strict';
+const assert = require('assert');
+const { empty, merge, parse, hasContent, SUGGESTED_BOOKS } = require('./yearbook.js');
+
+const local = empty();
+local.updatedAt = 10;
+local.word = 'שקט';
+const remote = empty();
+remote.updatedAt = 20;
+remote.goal = 'לטוס';
+remote.books = [{ title: 'Atomic Habits', author: 'James Clear', audio: true, favorite: true }];
+assert.strictEqual(merge(local, remote).goal, 'לטוס');
+assert.strictEqual(merge(remote, local).goal, 'לטוס');
+assert.strictEqual(merge(local, null).word, 'שקט');
+const text = JSON.stringify(remote);
+assert.strictEqual(parse(text).books[0].title, 'Atomic Habits');
+assert.strictEqual(parse('nope'), null);
+assert.strictEqual(hasContent(empty()), false);
+assert.strictEqual(hasContent(local), true);
+assert.strictEqual(SUGGESTED_BOOKS.length, 4);
+assert.ok(SUGGESTED_BOOKS.some(b => b.title === '$100M Offers'));
+console.log('yearbook cases passed');
