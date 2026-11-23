@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '2.3.5';
+const VERSION = '2.3.6';
 const CFG = window.APP_CONFIG || {};
 const TZ = CFG.TIME_ZONE || 'Asia/Jerusalem';
 const SCOPES = 'https://www.googleapis.com/auth/calendar';
@@ -63,62 +63,116 @@ function dayEndMs(k){ return parseKey(addDays(k,1)).getTime(); }
 
 /* ---------- categories (auto color by title) ---------- */
 function defaultCats(){
-  return [
-    { id:'important', name:'חשוב', color:'#b794f6', g:'3', kw:'יום הולדת, יום נישואין, יום נישואים, חתונה, יום שנה, birthday, anniversary, wedding' },
-    { id:'sport', name:'ספורט', color:'#ff3b30', g:'11', kw:'אימון, כושר, חדר כושר, טיפוס, אגרוף, בוקס, ריצה, ספורט, יוגה, פילאטיס, שחייה, כדורגל, כדורסל, טניס, הליכה, gym, workout, sport, climbing, boxing, run, yoga, swim, training, pilates' },
-    { id:'work', name:'עבודה', color:'#0a84ff', g:'9', kw:'פגישה, עבודה, ראיון, צילום, צילומים, עריכה, לקוח, לקוחה, שיחה, זום, משמרת, ייעוץ, meeting, work, interview, call, zoom, client, filming, shoot, editing' },
-    { id:'personal', name:'אישי', color:'#34c759', g:'2', kw:'אמא, אבא, משפחה, חברים, חבר, חברה שלי, בת זוג, בן זוג, טיול, ארוחה, דייט, אחי, אחות, אחותי, סבתא, סבא, רופא, רופאה, family, friends, mom, dad, trip, dinner, date, doctor, dentist' },
-    { id:'study', name:'לימודים', color:'#af52de', g:'3', kw:'קורס, לימודים, מבחן, פסיכומטרי, שיעור, הרצאה, תואר, אוניברסיטה, מכללה, רענון, study, course, exam, class, lecture, school' },
-    { id:'content', name:'תוכן', color:'#ff9500', g:'6', kw:'תוכן, סרטון, רילס, ריל, שוט, פוסט, content, video, reel, clip' },
-    { id:'admin', name:'סידורים', color:'#c9a000', g:'5', kw:'רכב, מוסך, טסט, בנק, מס, מסים, מיסים, רשות המסים, דרכון, ביטוח, תשלום, לשלם, סידורים, car, bank, tax, passport, insurance, pay' },
-  ];
+  const list = (CatsAuto.categories || []).map(c => ({
+    id: c.id, name: c.name, emoji: c.emoji || '', color: c.color, g: String(c.colorId || ''),
+    kw: (c.phrases || []).join(', ')
+  }));
+  list.push({ id: 'important', name: 'חשוב', emoji: '⭐', color: '#B794F6', g: '1', kw: '' });
+  return list;
 }
 const NEUTRAL = '#8e8e93';
+const CHAG = { id: 'chag', name: 'חג', emoji: '', color: '#E6E0F4', g: '' };
 function saveCats(){ LS.set('cats', S.cats); catCache.clear(); }
-const HEB_PREFIX = /^[והבלמשכ]{1,2}/;
-function normWord(w){ return w.toLowerCase().replace(/[״׳"'`]/g, ''); }
-function kwMatches(kw, title, words){
-  kw = kw.trim().toLowerCase(); if (!kw) return false;
-  if (kw.includes(' ')) return title.includes(kw);
-  const stem = kw.length >= 4 && /[הת]$/.test(kw) ? kw.slice(0, -1) : kw;
-  for (const w of words){
-    const cands = [w];
-    if (/^[\u0590-\u05FF]/.test(w)){ const a = w.replace(/^[והבלמשכ]/, ''); cands.push(a, a.replace(/^[והבלמשכ]/, '')); }
-    for (const c of cands){
-      if (c === kw) return true;
-      if (kw.length >= 3 && c.startsWith(stem) && c.length - stem.length <= 3) return true;
-    }
-  }
-  return false;
-}
 const catCache = new Map();
-const POSTER_CAT_IDS = ['important','sport','work','personal'];
+function categoryRules(){
+  return (S.cats || []).filter(c => c && c.id !== 'important' && c.id !== 'other' && c.id !== 'chag').map(c => ({
+    id: c.id,
+    phrases: String(c.kw || '').split(',').map(s => s.trim()).filter(Boolean)
+  }));
+}
 function categoryOf(title){
-  const key = (title || '').toLowerCase();
+  const key = CatsAuto.clean(title);
   if (catCache.has(key)) return catCache.get(key);
-  let found = null;
-  const autoId = (typeof autoCategoryId === 'function') ? autoCategoryId(title) : null;
-  if (autoId) found = S.cats.find(c => c.id === autoId) || null;
-  if (!found){
-    const words = key.split(/[\s,.\-–:;!?()\[\]/\\|+]+/).map(normWord).filter(Boolean);
-    for (const c of S.cats){
-      if (POSTER_CAT_IDS.indexOf(c.id) >= 0 || c.id === 'study' || c.id === 'content' || c.id === 'admin') continue;
-      if (c.kw.split(',').some(k => kwMatches(k, key, words))){ found = c; break; }
+  const id = CatsAuto.autoCategoryId(title, categoryRules());
+  const found = id ? (S.cats.find(c => c.id === id) || null) : null;
+  catCache.set(key, found);
+  return found;
+}
+function titleKey(title){ return CatsAuto.clean(title); }
+function titleMemory(title){
+  const map = LS.get('titleCats', {});
+  const k = titleKey(title);
+  return k && map[k] ? map[k] : '';
+}
+function rememberTitle(title, catId){
+  const k = titleKey(title);
+  if (!k) return;
+  const map = LS.get('titleCats', {});
+  if (catId) map[k] = catId;
+  else delete map[k];
+  LS.set('titleCats', map);
+  catCache.clear();
+}
+function chosenCat(ev){
+  if (!ev) return '';
+  if (ev.cat) return ev.cat;
+  return titleMemory(ev.title) || '';
+}
+function holidayInfo(ev){
+  if (!ev) return null;
+  if (ev.holiday) return { show: true, he: ev.displayTitle, heLast: ev.displayTitleLast || ev.displayTitle, span: ev.holidaySpan || 'all' };
+  const cal = (S.calendars || []).find(c => c.id === ev.calId);
+  if (!cal || !IsraelHolidays.isHolidayCalendar(cal)) return null;
+  return IsraelHolidays.classifyHoliday(ev.title);
+}
+function holidayView(ev, dayKey){
+  const info = holidayInfo(ev);
+  if (!info) return { holiday: false, hide: false, title: (ev && ev.title) || '' };
+  if (!info.show) return { holiday: true, hide: true, title: '' };
+  if (!dayKey) return { holiday: true, hide: false, title: info.he || ev.title || '' };
+  const startKey = ev.allDay ? String(ev.start).slice(0, 10) : keyOf(new Date(evStartMs(ev)));
+  const endKey = ev.allDay ? ev.end : addDays(startKey, 1);
+  const label = IsraelHolidays.labelOnDay({
+    allDay: true, start: startKey, end: endKey,
+    displayTitle: info.he, displayTitleLast: info.heLast || info.he, holidaySpan: info.span || 'all'
+  }, dayKey);
+  if (!label) return { holiday: true, hide: true, title: '' };
+  return { holiday: true, hide: false, title: label };
+}
+function eventTitle(ev, dayKey){
+  return holidayView(ev, dayKey).title || '';
+}
+function onHolidayCalendar(ev){
+  if (!ev) return false;
+  if (ev.holiday) return true;
+  const cal = (S.calendars || []).find(c => c.id === ev.calId);
+  return !!(cal && IsraelHolidays.isHolidayCalendar(cal));
+}
+function migrateCats(){
+  if (LS.get('catsVersion', 0) >= 1){
+    let changed = false;
+    for (const d of defaultCats()){
+      if (!S.cats.some(c => c.id === d.id)){ S.cats.push(d); changed = true; }
     }
+    if (changed) saveCats();
+    return;
   }
-  catCache.set(key, found); return found;
-}
-function ensureBuiltInCats(){
-  let changed = false;
-  for (const d of defaultCats()){
-    if (!S.cats.some(c => c.id === d.id)){ S.cats.unshift(d); changed = true; }
+  const map = { content: 'work', personal: 'family' };
+  let evChanged = false;
+  for (const ev of Object.values(S.events)){
+    if (ev && map[ev.cat]){ ev.cat = map[ev.cat]; evChanged = true; }
   }
-  if (changed) saveCats();
+  const builtin = new Set(defaultCats().map(c => c.id).concat(['content', 'personal']));
+  const custom = (S.cats || []).filter(c => c && !builtin.has(c.id));
+  S.cats = defaultCats().concat(custom);
+  saveCats();
+  if (evChanged) saveEvents();
+  LS.set('catsVersion', 1);
+  catCache.clear();
 }
-ensureBuiltInCats();
+migrateCats();
 function catOfEvent(ev){
+  if (!ev) return null;
+  const hv = holidayView(ev);
+  if (hv.holiday && !hv.hide) return CHAG;
   if (ev.cat){ const c = S.cats.find(c => c.id === ev.cat); if (c) return c; }
-  return categoryOf(ev.title);
+  const remembered = titleMemory(ev.title);
+  if (remembered){ const c = S.cats.find(c => c.id === remembered); if (c) return c; }
+  const auto = categoryOf(ev.title);
+  if (auto) return auto;
+  const byColor = CatsAuto.colorIdCategory(ev.colorId);
+  if (byColor){ const c = S.cats.find(c => c.id === byColor); if (c) return c; }
+  return null;
 }
 function nearestGColor(hex){
   const p = h => [1,3,5].map(i => parseInt(h.slice(i, i+2), 16));
@@ -141,7 +195,7 @@ function visibleCal(calId){
 }
 function eventsForDay(k){
   const a = dayStartMs(k), b = dayEndMs(k);
-  return Object.values(S.events).filter(ev => !ev.deleted && visibleCal(ev.calId) && evStartMs(ev) < b && evEndMs(ev) > a)
+  return Object.values(S.events).filter(ev => !ev.deleted && visibleCal(ev.calId) && !holidayView(ev, k).hide && evStartMs(ev) < b && evEndMs(ev) > a)
     .sort((x,y) => (y.allDay - x.allDay) || (evStartMs(x) - evStartMs(y)) || x.title.localeCompare(y.title));
 }
 function fromGoogle(g, cal){
@@ -156,7 +210,7 @@ function fromGoogle(g, cal){
       reminder = p ? p.minutes : -1;
     }
   }
-  return {
+  const base = {
     id: g.id, calId: cal.id, title: g.summary || '(ללא כותרת)', allDay,
     start: allDay ? g.start.date : g.start.dateTime, end: allDay ? g.end.date : g.end.dateTime,
     location: g.location || '', notes: g.description || '', colorId: g.colorId || null,
@@ -164,6 +218,16 @@ function fromGoogle(g, cal){
     reminder, recurring: !!g.recurringEventId, readOnly: !['owner','writer'].includes(cal.accessRole),
     link: g.htmlLink || ''
   };
+  if (IsraelHolidays.isHolidayCalendar(cal)){
+    const h = IsraelHolidays.classifyHoliday(base.title);
+    if (!h || !h.show) return null;
+    base.holiday = true;
+    base.displayTitle = h.he;
+    base.displayTitleLast = h.heLast || h.he;
+    base.holidaySpan = h.span || 'all';
+    base.readOnly = true;
+  }
+  return base;
 }
 function toGoogle(ev){
   const body = {
@@ -171,11 +235,11 @@ function toGoogle(ev){
     start: ev.allDay ? { date: ev.start } : { dateTime: new Date(ev.start).toISOString(), timeZone: TZ },
     end: ev.allDay ? { date: ev.end } : { dateTime: new Date(ev.end).toISOString(), timeZone: TZ },
   };
+  const explicit = ev.cat || titleMemory(ev.title) || '';
   const cat = catOfEvent(ev);
-  if (!ev.cat && cat) ev.cat = cat.id;
-  if (cat) body.colorId = String(cat.g || nearestGColor(cat.color));
+  if (cat && cat.id !== 'chag') body.colorId = String(cat.g || nearestGColor(cat.color));
   if (ev.rrule) body.recurrence = ['RRULE:' + String(ev.rrule).replace(/^RRULE:/, '')];
-  body.extendedProperties = { private: { royCat: ev.cat || '' } };
+  body.extendedProperties = { private: { royCat: explicit } };
   const overrides = [];
   if (ev.reminder != null && ev.reminder >= 0){
     overrides.push({ method:'popup', minutes: ev.reminder });
@@ -284,7 +348,9 @@ async function fetchRange(fromKey, toKey){
     }
     for (const g of items){
       if (g.status === 'cancelled' || pendingIds.has(g.id)) continue;
-      S.events[g.id] = fromGoogle(g, cal);
+      const mapped = fromGoogle(g, cal);
+      if (!mapped){ delete S.events[g.id]; continue; }
+      S.events[g.id] = mapped;
     }
   }
   saveEvents();
@@ -374,6 +440,7 @@ function setEventCategory(id, catId){
   if (!ev) return;
   if (ev.readOnly){ toast('יומן לקריאה בלבד'); return; }
   ev.cat = catId || null;
+  rememberTitle(ev.title, catId || '');
   ev.pending = true;
   S.events[id] = ev;
   saveEvents();

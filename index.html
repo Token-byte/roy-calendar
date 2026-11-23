@@ -46,10 +46,15 @@
             <button type="button" class="y-arrow" id="yPrev" aria-label="שנה קודמת">›</button>
             <div class="y-legend">
               <span><i class="work"></i>עבודה</span>
+              <span><i class="study"></i>לימודים</span>
               <span><i class="sport"></i>ספורט</span>
-              <span><i class="personal"></i>אישי</span>
-              <span><i class="important"></i>חשוב</span>
+              <span><i class="travel"></i>טיולים</span>
+              <span><i class="family"></i>משפחה</span>
+              <span><i class="admin"></i>סידורים</span>
+              <span><i class="culture"></i>תרבות</span>
               <span><i class="other"></i>אחר</span>
+              <span><i class="important"></i>חשוב</span>
+              <span><i class="chag"></i>חג</span>
             </div>
             <button type="button" class="y-arrow" id="yNext" aria-label="שנה הבאה">‹</button>
           </div>
@@ -214,7 +219,7 @@
 
     <div class="card">
       <div class="card-head"><b>צבעים לפי סוג</b><button class="link small" id="catReset">איפוס</button></div>
-      <p class="muted small">עבודה כחול, ספורט אדום, אישי ירוק, חשוב סגול. צהוב רק לאירוע בלי קטגוריה. בחירה ידנית ביום גוברת על הזיהוי לפי השם.</p>
+      <p class="muted small">עבודה, לימודים, ספורט, טיולים, משפחה, סידורים, תרבות. צהוב רק ל„אחר”. חשוב הוא בחירה ידנית. הבחירה נזכרת לפי שם הפתק.</p>
       <div id="catList"></div>
       <button class="secondary" id="catAdd">+ קטגוריה</button>
       <p class="muted small">הקטגוריה והצבע נכתבים לגוגל עם כל פתק.</p>
@@ -271,6 +276,7 @@
 
 <script src="parse-he.js"></script>
 <script src="cats-auto.js"></script>
+<script src="holidays.js"></script>
 <script src="sync-keep.js"></script>
 <script src="google-auth.js"></script>
 <script src="year.js"></script>

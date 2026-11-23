@@ -29,17 +29,15 @@ function yhash(s){
 function displayedYear(){ return Y.year || parseKey(S.sel).getFullYear(); }
 
 function noteKind(ev){
+  if (holidayView(ev).holiday && !holidayView(ev).hide) return 'chag';
   const c = catOfEvent(ev);
-  if (!c) return 'other';
-  if (c.id === 'sport' || c.id === 'work' || c.id === 'personal' || c.id === 'important') return c.id;
-  return 'other';
+  return c ? c.id : 'other';
 }
-const SHEET_CATS = [
-  { id:'work', name:'עבודה' },
-  { id:'sport', name:'ספורט' },
-  { id:'personal', name:'אישי' },
-  { id:'important', name:'חשוב' },
-];
+function sheetCats(){
+  const list = (CatsAuto.categories || []).map(c => ({ id: c.id, name: (c.emoji ? c.emoji + ' ' : '') + c.name }));
+  list.push({ id: 'important', name: '⭐ חשוב' });
+  return list;
+}
 function eventTimeLabel(ev, dayKey){
   if (ev.allDay) return 'כל היום';
   const startKey = keyOf(new Date(evStartMs(ev)));
@@ -75,14 +73,14 @@ function yearMap(year){
   const endMs = dayStartMs(endKey);
   const map = new Map();
   for (const ev of Object.values(S.events)){
-    if (!ev || ev.deleted || !visibleCal(ev.calId)) continue;
+    if (!ev || ev.deleted || !visibleCal(ev.calId) || holidayView(ev).hide) continue;
     if (evStartMs(ev) >= endMs || evEndMs(ev) <= startMs) continue;
     let k = ev.allDay ? ev.start : keyOf(new Date(evStartMs(ev)));
     if (k < year + '-01-01') k = year + '-01-01';
     for (let guard = 0; k < endKey && guard < 48; guard++){
       const a = dayStartMs(k);
       if (evEndMs(ev) <= a) break;
-      if (evStartMs(ev) < dayEndMs(k)){
+      if (evStartMs(ev) < dayEndMs(k) && !holidayView(ev, k).hide){
         let arr = map.get(k);
         if (!arr){ arr = []; map.set(k, arr); }
         arr.push(ev);
@@ -222,7 +220,7 @@ function placeNotes(){
       }
       const title = document.createElement('div');
       title.className = 'yti';
-      title.textContent = ev.title || '';
+      title.textContent = eventTitle(ev, k) || '';
       tt.appendChild(title);
       note.appendChild(tape);
       note.appendChild(tt);
@@ -494,9 +492,10 @@ function openSheet(k){
     const tm = eventTimeLabel(ev, k) || (ev.allDay ? 'כל היום' : '');
     const sub = ev.location ? '<small>' + esc(ev.location) + '</small>' : '';
     const kind = noteKind(ev);
-    const chips = SHEET_CATS.map(c => '<button type="button" class="' + c.id + (ev.cat === c.id ? ' on' : '') + '" data-setcat="' + c.id + '">' + c.name + '</button>').join('')
-      + '<button type="button" class="auto' + (!ev.cat ? ' on' : '') + '" data-setcat="">אוטו</button>';
-    return '<div class="y-ev" data-id="' + esc(ev.id) + '"><button type="button" class="y-item"><i class="' + kind + '"></i><span class="y-tm">' + esc(tm) + '</span><span class="y-bd"><b>' + esc(ev.title) + '</b>' + sub + '</span></button><div class="y-setcats">' + chips + '</div></div>';
+    const chosen = chosenCat(ev);
+    const chips = ev.readOnly ? '' : sheetCats().map(c => '<button type="button" class="' + c.id + (chosen === c.id ? ' on' : '') + '" data-setcat="' + c.id + '">' + c.name + '</button>').join('')
+      + '<button type="button" class="auto' + (!chosen ? ' on' : '') + '" data-setcat="">אוטו</button>';
+    return '<div class="y-ev" data-id="' + esc(ev.id) + '"><button type="button" class="y-item"><i class="' + kind + '"></i><span class="y-tm">' + esc(tm) + '</span><span class="y-bd"><b>' + esc(eventTitle(ev, k)) + '</b>' + sub + '</span></button>' + (chips ? '<div class="y-setcats">' + chips + '</div>' : '') + '</div>';
   }).join('');
   const sheet = $('ySheet');
   sheetOpenedAt = Date.now();
