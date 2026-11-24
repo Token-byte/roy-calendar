@@ -51,9 +51,29 @@ function undoVoiceCreate(){
   if (S.connected) sync();
   toast('הפתק בוטל');
 }
-function createFromPhrase(text){
-  const parsed = HeParse.parseHebrewEvent(text, new Date());
-  if (!parsed.title){ toast('לא הבנתי את המשפט'); return; }
+function catForTitle(title){
+  const mem = typeof titleMemory === 'function' ? titleMemory(title) : '';
+  if (mem){
+    const found = (S.cats || []).find(c => c.id === mem);
+    if (found) return found;
+  }
+  return typeof categoryOf === 'function' ? categoryOf(title) : null;
+}
+function effectiveReminder(parsed){
+  if (parsed.reminderMinutes != null) return parsed.reminderMinutes;
+  const cat = catForTitle(parsed.title);
+  return Reminders.defaultMinutes({
+    title: parsed.title,
+    catId: cat && cat.id || '',
+    settingsDefault: S.settings.defaultReminder
+  });
+}
+function displayParsed(parsed){
+  const effective = effectiveReminder(parsed);
+  const show = parsed.reminderMinutes != null || effective !== S.settings.defaultReminder;
+  return Object.assign({}, parsed, { reminderMinutes: show ? effective : parsed.reminderMinutes });
+}
+function eventFromParsed(parsed){
   const ev = {
     id: 'local-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     calId: 'local',
@@ -61,7 +81,7 @@ function createFromPhrase(text){
     allDay: parsed.allDay,
     location: '',
     notes: '',
-    reminder: parsed.reminderMinutes == null ? S.settings.defaultReminder : parsed.reminderMinutes,
+    reminder: effectiveReminder(parsed),
     cat: null,
     pending: true,
     rrule: parsed.rrule || null,
@@ -75,16 +95,65 @@ function createFromPhrase(text){
     ev.start = s.toISOString();
     ev.end = en.toISOString();
   }
+  return ev;
+}
+function commitParsed(parsed, quiet){
+  const ev = eventFromParsed(parsed);
   S.events[ev.id] = ev;
   saveEvents();
   queue('create', ev);
+  if (quiet) return ev;
   S.sel = parsed.date;
   S.cursor = firstOfMonth(parsed.date);
   S.view = 'year';
   render();
   scheduleNotifications();
-  if (S.connected) sync().then(() => { if (!S.ops.length && voiceUndo === ev.id) $('vcWhen').textContent = describeParsed(parsed) + ' · בגוגל'; });
-  showVoiceConfirm(ev, parsed);
+  const shown = displayParsed(parsed);
+  if (S.connected) sync().then(() => { if (!S.ops.length && voiceUndo === ev.id) $('vcWhen').textContent = describeParsed(shown) + ' · בגוגל'; });
+  showVoiceConfirm(ev, shown);
+  return ev;
+}
+let splitDraft = [];
+function renderSplit(){
+  const list = $('splitList');
+  if (!list) return;
+  list.innerHTML = splitDraft.map((p, i) => {
+    const cat = catForTitle(p.title);
+    const catBit = cat ? ' · ' + cat.name : '';
+    return `<div class="split-row"><i class="split-dot" style="background:${cat ? cat.color : '#d0d0d4'}"></i><div><b>${esc(p.title)}</b><small>${esc(describeParsed(displayParsed(p)))}${esc(catBit)}</small></div><button type="button" data-drop="${i}">הסרה</button></div>`;
+  }).join('');
+}
+function openSplit(parts){
+  splitDraft = parts.map(p => Object.assign({}, p));
+  renderSplit();
+  $('splitBackdrop').classList.remove('hidden');
+}
+function closeSplit(){
+  if ($('splitBackdrop')) $('splitBackdrop').classList.add('hidden');
+  splitDraft = [];
+}
+function saveSplit(e){
+  if (e) e.preventDefault();
+  const parts = splitDraft.slice();
+  closeSplit();
+  if (!parts.length){ toast('אין פתקים לשמירה'); return; }
+  parts.forEach(p => commitParsed(p, true));
+  S.sel = parts[0].date;
+  S.cursor = firstOfMonth(parts[0].date);
+  S.view = 'year';
+  render();
+  scheduleNotifications();
+  if (S.connected) sync();
+  else if (typeof renderBanner === 'function') renderBanner();
+  toast('נשמרו ' + parts.length + ' פתקים');
+}
+function createFromPhrase(text){
+  const many = HeParse.parseHebrewEvents(text, new Date());
+  if (!many.length || !many[0].title){ toast('לא הבנתי את המשפט'); return; }
+  if (many.length === 1){ commitParsed(many[0], false); return; }
+  const parts = many.filter(p => p.title && p.title !== 'אירוע');
+  if (parts.length <= 1){ commitParsed((parts[0] || many[0]), false); return; }
+  openSplit(parts);
 }
 function stopListen(){
   if (voiceRec){ try { voiceRec.onend = null; voiceRec.stop(); } catch(e){} }
@@ -157,6 +226,16 @@ function initVoice(){
   });
   $('voiceBackdrop').addEventListener('click', e => { if (e.target.id === 'voiceBackdrop') closeVoice(); });
   $('vcUndo').onclick = undoVoiceCreate;
+  if ($('splitSheet')) $('splitSheet').addEventListener('submit', saveSplit);
+  if ($('splitCancel')) $('splitCancel').onclick = () => { closeSplit(); if (S.connected && !tokenValid()) sync(); };
+  if ($('splitList')) $('splitList').addEventListener('click', e => {
+    const b = e.target.closest('[data-drop]');
+    if (!b) return;
+    splitDraft.splice(Number(b.dataset.drop), 1);
+    if (!splitDraft.length){ closeSplit(); toast('אין פתקים לשמירה'); return; }
+    renderSplit();
+  });
+  if ($('splitBackdrop')) $('splitBackdrop').addEventListener('click', e => { if (e.target.id === 'splitBackdrop') closeSplit(); });
   const params = new URLSearchParams(location.search);
   const add = params.get('add');
   if (add && add.trim()){

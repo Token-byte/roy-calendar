@@ -44,5 +44,41 @@
     y = normalize(y);
     return !!(y.places.length || y.hiddenNames.length || y.books.length || y.movies.length || y.shows.length || y.word || y.goal);
   }
-  return { SUGGESTED_BOOKS, empty, normalize, parse, merge, hasContent };
+  function eventStartKey(ev){
+    let start = ev && ev.start;
+    if (start && typeof start === 'object') start = start.date || start.dateTime || '';
+    return String(start || '').slice(0, 10);
+  }
+  function isProtected(ev){
+    if (!ev || typeof ev !== 'object') return false;
+    if (ev.royKind === 'yearbook') return true;
+    const title = String(ev.title || ev.summary || '').trim();
+    return title === 'יומן שנה' && eventStartKey(ev) === '2000-01-01';
+  }
+  function eventIdFromPath(path){
+    const m = String(path || '').match(/\/events\/([^/?#]+)/);
+    if (!m) return '';
+    try { return decodeURIComponent(m[1]); }
+    catch (e) { return m[1]; }
+  }
+  function blocksDelete(method, path, ctx){
+    if (String(method || '').toUpperCase() !== 'DELETE') return false;
+    ctx = ctx || {};
+    const id = eventIdFromPath(path);
+    if (ctx.knownId && id && String(ctx.knownId) === id) return true;
+    if (isProtected(ctx.event)) return true;
+    if (id && ctx.events && isProtected(ctx.events[id])) return true;
+    return false;
+  }
+  function privateProps(ev, royCat){
+    const priv = { royCat: royCat == null ? '' : String(royCat) };
+    if (ev && ev.royLocalId) priv.royLocalId = String(ev.royLocalId);
+    if (ev && ev.royKind) priv.royKind = String(ev.royKind);
+    if (isProtected(ev)) priv.royKind = 'yearbook';
+    return priv;
+  }
+  return {
+    SUGGESTED_BOOKS, empty, normalize, parse, merge, hasContent,
+    isProtected, blocksDelete, privateProps, eventIdFromPath
+  };
 });

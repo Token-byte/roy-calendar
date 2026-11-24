@@ -1,6 +1,6 @@
 'use strict';
 const assert = require('assert');
-const { parseHebrewEvent } = require('./parse-he.js');
+const { parseHebrewEvent, parseHebrewEvents } = require('./parse-he.js');
 
 const NOW = new Date(2026, 10, 21, 15, 0, 0); // Saturday 21 Nov 2026
 
@@ -44,4 +44,47 @@ for (const [input, expect] of cases){
 }
 
 assert.strictEqual(failed, 0, failed + ' parser cases failed');
+
+for (const [input, expect] of cases){
+  const many = parseHebrewEvents(input, NOW);
+  assert.strictEqual(many.length, 1, input);
+  const one = parseHebrewEvent(input, NOW);
+  assert.deepStrictEqual(many[0], one);
+  for (const k of Object.keys(expect)) assert.strictEqual(many[0][k], expect[k], input + ' ' + k);
+}
+
+const diary = parseHebrewEvents('היום היה לי פגישה עם ליעם וגם יצאתי לרוץ וגם התחלתי לקרוא ספר', NOW);
+assert.strictEqual(diary.length, 3);
+assert.deepStrictEqual(diary.map(ev => ev.title), ['פגישה עם ליעם', 'לרוץ', 'לקרוא ספר']);
+diary.forEach(ev => {
+  assert.strictEqual(ev.date, '2026-11-21');
+  assert.strictEqual(ev.allDay, true);
+  assert.strictEqual(ev.time, null);
+});
+
+const timed = parseHebrewEvents('מחר בשעה 10:00 פגישה וגם ריצה', NOW);
+assert.strictEqual(timed.length, 2);
+assert.strictEqual(timed[0].title, 'פגישה');
+assert.strictEqual(timed[0].date, '2026-11-22');
+assert.strictEqual(timed[0].time, '10:00');
+assert.strictEqual(timed[0].allDay, false);
+assert.strictEqual(timed[1].title, 'ריצה');
+assert.strictEqual(timed[1].date, '2026-11-22');
+assert.strictEqual(timed[1].allDay, true);
+assert.strictEqual(timed[1].time, null);
+
+const ownTime = parseHebrewEvents('היום פגישה וגם ב-18:00 ריצה', NOW);
+assert.strictEqual(ownTime[1].date, '2026-11-21');
+assert.strictEqual(ownTime[1].time, '18:00');
+assert.strictEqual(ownTime[1].allDay, false);
+
+const singleTail = parseHebrewEvents('פגישה וגם', NOW);
+assert.strictEqual(singleTail.length, 1);
+assert.deepStrictEqual(singleTail[0], parseHebrewEvent('פגישה וגם', NOW));
+
+const thursday = parseHebrewEvents('ביום חמישי פגישה וגם ספר', NOW);
+assert.strictEqual(thursday[0].date, '2026-11-26');
+assert.strictEqual(thursday[1].date, '2026-11-26');
+assert.strictEqual(thursday[1].title, 'ספר');
+
 console.log(cases.length + ' parser cases passed');

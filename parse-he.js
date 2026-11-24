@@ -251,6 +251,39 @@
       .trim();
   }
 
+  function splitVegam(input){
+    const text = normalize(input);
+    const re = /(?:^|\s)ו\s*גם(?=\s|$)/g;
+    const parts = [];
+    let last = 0;
+    let found = false;
+    let m;
+    while ((m = re.exec(text))){
+      found = true;
+      parts.push(text.slice(last, m.index));
+      last = m.index + m[0].length;
+    }
+    if (!found) return [text];
+    parts.push(text.slice(last));
+    return parts.map(s => s.replace(/^[\s,.:\-]+|[\s,.:\-]+$/g, '').trim()).filter(Boolean);
+  }
+  function hasExplicitDate(text, now){
+    now = now instanceof Date ? now : new Date();
+    let t = normalize(text);
+    t = extractReminder(t).text;
+    t = extractRecurrence(t).text;
+    const abs = extractAbsoluteDate(t, now);
+    if (abs.date) return true;
+    const rel = extractRelative(abs.text, now);
+    return !!(rel && rel.date);
+  }
+  function tidyDiaryTitle(title){
+    return String(title || '')
+      .replace(/^(?:היה|הייתה|היתה|היו)\s+לי\s+/, '')
+      .replace(/^(?:יצאתי|התחלתי|הלכתי|עשיתי)\s+/, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
   function parseHebrewEvent(input, now){
     now = now instanceof Date ? now : new Date();
     let text = normalize(input);
@@ -292,5 +325,26 @@
     };
   }
 
-  return { parseHebrewEvent, normalize };
+  function parseHebrewEvents(input, now){
+    now = now instanceof Date ? now : new Date();
+    const parts = splitVegam(input);
+    if (parts.length <= 1) return [parseHebrewEvent(input, now)];
+    const first = parseHebrewEvent(parts[0], now);
+    const firstTitle = tidyDiaryTitle(first.title);
+    if (firstTitle) first.title = firstTitle;
+    const out = [first];
+    for (let i = 1; i < parts.length; i++){
+      const ev = parseHebrewEvent(parts[i], now);
+      if (!hasExplicitDate(parts[i], now)){
+        ev.date = first.date;
+        ev.weekday = first.weekday;
+      }
+      const title = tidyDiaryTitle(ev.title);
+      if (title) ev.title = title;
+      out.push(ev);
+    }
+    return out;
+  }
+
+  return { parseHebrewEvent, parseHebrewEvents, normalize };
 });
