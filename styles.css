@@ -290,7 +290,10 @@ body.view-year #app,body.view-wrap #app{background:var(--paper,#fff)}
 .y-bd b{font-weight:400;font-size:16px;color:#1d1d1d;display:block}
 .y-bd small{display:block;font-size:12px;color:#7a88b8;margin-top:1px}
 .y-empty{color:#7a88b8;text-align:center;padding:16px 0;font-size:14px}
+.ysheet-actions{display:flex;gap:8px;align-items:stretch;margin-top:8px;flex:none}
+.ysheet-mic{width:48px;border-radius:12px;border:1.5px solid var(--ink);color:var(--ink);background:#fff;display:flex;align-items:center;justify-content:center;flex:none}
 .ysheet-add{margin-top:8px;border:1.5px dashed var(--ink);border-radius:12px;text-align:center;padding:11px;font-size:14px;color:var(--ink);background:#fff;flex:none;width:100%}
+.ysheet-actions .ysheet-add{margin-top:0;flex:1;width:auto}
 
 .themes{display:flex;flex-wrap:wrap;gap:8px}
 .themes button{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:14px;border:1.5px solid transparent;background:var(--bg);font-size:13px;font-weight:700}

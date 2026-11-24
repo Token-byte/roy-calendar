@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '2.4.0';
+const VERSION = '2.4.1';
 const CFG = window.APP_CONFIG || {};
 const TZ = CFG.TIME_ZONE || 'Asia/Jerusalem';
 const SCOPES = 'https://www.googleapis.com/auth/calendar';
@@ -861,6 +861,15 @@ function saveEditor(e){
   e.preventDefault();
   const title = $('edTitle').value.trim(); if (!title) return;
   const allDay = $('edAllDay').checked, date = $('edDate').value;
+  if (!editing && typeof HeParse !== 'undefined' && typeof openSplit === 'function'){
+    const many = HeParse.parseHebrewEvents(title, new Date());
+    if (many.length > 1){
+      if (!many[0].explicitDate) many.forEach(p => { if (!p.explicitDate) p.date = date; });
+      closeEditor();
+      openSplit(many);
+      return;
+    }
+  }
   let endDate = $('edEndDate').value || date; if (endDate < date) endDate = date;
   const ev = editing || { id: 'local-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6), calId: 'local' };
   ev.title = title; ev.allDay = allDay; ev.location = $('edLocation').value.trim(); ev.notes = $('edNotes').value;

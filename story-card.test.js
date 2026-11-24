@@ -7,8 +7,8 @@ const sw = fs.readFileSync(__dirname + '/sw.js', 'utf8');
 const css = fs.readFileSync(__dirname + '/styles.css', 'utf8');
 const html = fs.readFileSync(__dirname + '/index.html', 'utf8');
 
-assert.ok(sw.includes("const CACHE = 'roy-cal-v2.4.0'"));
-assert.ok(!sw.includes('roy-cal-v2.3.7'));
+assert.ok(sw.includes("const CACHE = 'roy-cal-v2.4.1'"));
+assert.ok(!sw.includes('roy-cal-v2.4.0'));
 FONT_FILES.forEach(file => {
   assert.ok(fs.existsSync(__dirname + '/' + file), file);
   assert.ok(sw.includes(file), file);

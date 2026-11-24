@@ -251,38 +251,77 @@
       .trim();
   }
 
-  function splitVegam(input){
-    const text = normalize(input);
-    const re = /(?:^|\s)ו\s*גם(?=\s|$)/g;
-    const parts = [];
-    let last = 0;
-    let found = false;
-    let m;
-    while ((m = re.exec(text))){
-      found = true;
-      parts.push(text.slice(last, m.index));
-      last = m.index + m[0].length;
-    }
-    if (!found) return [text];
-    parts.push(text.slice(last));
-    return parts.map(s => s.replace(/^[\s,.:\-]+|[\s,.:\-]+$/g, '').trim()).filter(Boolean);
+  const PAST_VERBS = new Set([
+    'הלכתי','למדתי','יצאתי','הבאתי','קניתי','נפגשתי','פגשתי','רצתי','התחלתי','עבדתי','סיימתי',
+    'עשיתי','אכלתי','שתיתי','ישנתי','קמתי','ראיתי','שמעתי','לקחתי','נתתי','ביקרתי','טסתי',
+    'נסעתי','חזרתי','טיפסתי','שחיתי','בישלתי','צילמתי','ערכתי','שילמתי','הגעתי','נכנסתי',
+    'עליתי','ירדתי','רקדתי','שיחקתי','צפיתי','התקשרתי','שלחתי','קיבלתי','פתחתי','סגרתי',
+    'ניסיתי','הצלחתי','שכחתי','זכרתי','החלטתי','חשבתי','הרגשתי','נהניתי','חיכיתי','עמדתי',
+    'שכבתי','התעוררתי','התקלחתי','הזמנתי','קבעתי','אמרתי','דיברתי','כתבתי','קראתי','ישבתי',
+    'נשארתי','אהבתי','גמרתי','המשכתי','הפסקתי','נכשלתי','סבלתי','המתנתי','סידרתי','ניקיתי',
+    'אימנתי','הכנתי'
+  ]);
+  const PAST_STOP = new Set([
+    'אותי','איתי','ביתי','משפחתי','עבודתי','חברתי','אחותי','אשתי','בתי','דירתי','מיטתי',
+    'מכוניתי','כיתתי','מדינתי','ילדותי','שנתי','בריאותי','עירתי','רשימתי'
+  ]);
+  const PREP = new Set(['של','את','עם','אצל','על','אל','מול','ליד','בלי','אחרי','לפני','כמו','בין','עד','מן','מה','ל','ב','מ','ה','ו','בשביל','לקראת','נגד','תוך','כדי']);
+  const ACTIVITY = {
+    'לטפס': 'טיפוס', 'לטיפוס': 'טיפוס', 'לרוץ': 'ריצה', 'לריצה': 'ריצה',
+    'לשחות': 'שחייה', 'לשחייה': 'שחייה', 'לאימון': 'אימון', 'לכושר': 'כושר',
+    'ליוגה': 'יוגה', 'לפילאטיס': 'פילאטיס', 'לאיגרוף': 'איגרוף', 'לאגרוף': 'איגרוף',
+    'לבולדרינג': 'בולדרינג'
+  };
+
+  function pastVerb(word){
+    let w = String(word || '');
+    if (PAST_STOP.has(w)) return '';
+    if (w.startsWith('ו') && w.length > 3) w = w.slice(1);
+    if (PAST_STOP.has(w)) return '';
+    if (PAST_VERBS.has(w) || /^[\u0590-\u05FF]{3,}תי$/.test(w)) return w;
+    return '';
   }
-  function hasExplicitDate(text, now){
-    now = now instanceof Date ? now : new Date();
-    let t = normalize(text);
-    t = extractReminder(t).text;
-    t = extractRecurrence(t).text;
-    const abs = extractAbsoluteDate(t, now);
-    if (abs.date) return true;
-    const rel = extractRelative(abs.text, now);
-    return !!(rel && rel.date);
+  function splitPunct(text){
+    const masked = String(text || '').replace(/(\d)\.(\d)/g, '$1§$2');
+    return masked.split(/\s*[,;!?]+\s*|\s*\.\s*/)
+      .map(s => s.replace(/§/g, '.').trim())
+      .filter(Boolean);
+  }
+  function splitWords(text){
+    const words = String(text || '').split(/\s+/).filter(Boolean);
+    const clauses = [];
+    let cur = [];
+    function flush(){ if (cur.length){ clauses.push(cur.join(' ')); cur = []; } }
+    for (let i = 0; i < words.length; i++){
+      const w = words[i];
+      const next = words[i + 1] || '';
+      if (cur.length && (w === 'אחר' || w === 'אח״כ' || w === 'אח"כ') && next === 'כך'){ flush(); i++; continue; }
+      if (cur.length && (w === 'אחר-כך' || w === 'אחכ')){ flush(); continue; }
+      if (cur.length && (w === 'וגם' || w === 'גם' || w === 'ואז' || w === 'אז')){ flush(); continue; }
+      if (cur.length && w === 'ו' && next === 'גם'){ flush(); i++; continue; }
+      if (cur.length && pastVerb(w) && !PREP.has(cur[cur.length - 1])){ flush(); cur = [w]; continue; }
+      cur.push(w);
+    }
+    flush();
+    return clauses;
+  }
+  function splitClauses(input){
+    const text = normalize(input);
+    const clauses = [];
+    splitPunct(text).forEach(part => clauses.push(...splitWords(part)));
+    return clauses.length ? clauses : [text];
   }
   function tidyDiaryTitle(title){
-    return String(title || '')
-      .replace(/^(?:היה|הייתה|היתה|היו)\s+לי\s+/, '')
-      .replace(/^(?:יצאתי|התחלתי|הלכתי|עשיתי)\s+/, '')
-      .replace(/\s+/g, ' ')
-      .trim();
+    let t = String(title || '').replace(/\s+/g, ' ').trim();
+    const first = t.split(' ')[0] || '';
+    if (first.startsWith('ו') && pastVerb(first)) t = first.slice(1) + t.slice(first.length);
+    let m = t.match(/^(?:הלכתי|יצאתי|התחלתי)\s+לישון(?:\s+(.*))?$/);
+    if (m) return ('ישנתי' + (m[1] ? ' ' + m[1] : '')).replace(/\s+/g, ' ').trim();
+    m = t.match(/^(?:הלכתי|יצאתי|התחלתי|עשיתי)\s+(ל[\u0590-\u05FF]+)$/);
+    if (m && ACTIVITY[m[1]]) return ACTIVITY[m[1]];
+    t = t.replace(/^(?:היה|הייתה|היתה|היו)\s+לי\s+/, '');
+    t = t.replace(/^(?:יצאתי|התחלתי|הלכתי|עשיתי)\s+/, '');
+    return t.replace(/\s+/g, ' ').trim();
   }
   function parseHebrewEvent(input, now){
     now = now instanceof Date ? now : new Date();
@@ -295,14 +334,17 @@
     text = abs.text;
     let date = abs.date;
     let weekday = rec.weekday;
+    let explicitDate = !!date;
     if (!date){
       const rel = extractRelative(text, now);
       text = rel.text;
       date = rel.date;
+      explicitDate = !!date;
       if (rel.weekday != null) weekday = rel.weekday;
     } else {
       const rel = extractRelative(text, now);
       text = rel.text;
+      explicitDate = true;
     }
     const tm = extractTime(text);
     text = tm.text;
@@ -322,12 +364,13 @@
       reminderMinutes: rem.minutes,
       rrule,
       weekday: date.getDay(),
+      explicitDate
     };
   }
 
   function parseHebrewEvents(input, now){
     now = now instanceof Date ? now : new Date();
-    const parts = splitVegam(input);
+    const parts = splitClauses(input);
     if (parts.length <= 1) return [parseHebrewEvent(input, now)];
     const first = parseHebrewEvent(parts[0], now);
     const firstTitle = tidyDiaryTitle(first.title);
@@ -335,7 +378,7 @@
     const out = [first];
     for (let i = 1; i < parts.length; i++){
       const ev = parseHebrewEvent(parts[i], now);
-      if (!hasExplicitDate(parts[i], now)){
+      if (!ev.explicitDate){
         ev.date = first.date;
         ev.weekday = first.weekday;
       }
@@ -343,7 +386,7 @@
       if (title) ev.title = title;
       out.push(ev);
     }
-    return out;
+    return out.filter(ev => ev.title);
   }
 
   return { parseHebrewEvent, parseHebrewEvents, normalize };

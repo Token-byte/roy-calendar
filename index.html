@@ -95,7 +95,10 @@
           <div class="ysheet-num" id="ySheetNum"></div>
         </div>
         <div class="ysheet-list" id="ySheetList"></div>
-        <button type="button" class="ysheet-add" id="ySheetAdd">+ פתק חדש ליום הזה</button>
+        <div class="ysheet-actions">
+          <button type="button" class="ysheet-mic" id="ySheetMic" aria-label="הוספה בקול"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11h-2z"/></svg></button>
+          <button type="button" class="ysheet-add" id="ySheetAdd">+ פתק חדש ליום הזה</button>
+        </div>
       </div>
     </section>
     <section id="monthView" class="view hidden">
@@ -307,7 +310,7 @@
     <p class="small" id="voiceHint"></p>
     <button type="button" class="voice-mic hidden" id="voiceMic">האזנה</button>
     <textarea id="voiceText" class="input" rows="3" placeholder="יום ראשון בשעה 12:00 טיפוס" enterkeyhint="done"></textarea>
-    <p class="muted small">באייפון, אם אין כפתור האזנה, לוחצים על המיקרופון במקלדת. „וגם” מפצל לכמה פתקים. קיצור: הכתבת טקסט ואז פתיחת הכתובת עם הטקסט אחרי ?add=</p>
+    <p class="muted small">באייפון, אם אין כפתור האזנה, לוחצים על המיקרופון במקלדת. כמה פעולות במשפט אחד, גם בלי „וגם”, הופכות לכמה פתקים. קיצור: הכתבת טקסט ואז פתיחת הכתובת עם הטקסט אחרי ?add=</p>
   </form>
 </div>
 
