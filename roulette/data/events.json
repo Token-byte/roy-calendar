@@ -1,16 +1,16 @@
 {
-  "updatedAt": "2026-11-23T15:54:22.075970+02:00",
+  "updatedAt": "2026-11-24T03:28:54.264732+02:00",
   "sources": [
     {
       "id": "makore",
       "ok": true,
-      "count": 33,
+      "count": 39,
       "error": null
     },
     {
       "id": "tickchak",
       "ok": true,
-      "count": 3,
+      "count": 7,
       "error": null
     },
     {
@@ -260,6 +260,17 @@
       "price": null
     },
     {
+      "title": "חמישי חופשי | בר פתוח ❤️",
+      "start": "2026-11-26T21:00:00Z",
+      "venue": "ברקת 9, פתח תקווה, ישראל",
+      "city": "פתח תקווה",
+      "lat": 32.084,
+      "lon": 34.8878,
+      "url": "https://www.makore.co.il/event/95d83982bb8e7f146d954ea7adb54e944f850444085382bc4f7d2e3ac5139799",
+      "source": "makore",
+      "price": null
+    },
+    {
       "title": "MITA GAMI x CHAIM | Thursday 26.11 | THE PLACE",
       "start": "2026-11-26T21:30:00Z",
       "venue": "דרך קיבוץ גלויות 52, תל אביב-יפו, ישראל",
@@ -269,6 +280,39 @@
       "url": "https://www.makore.co.il/event/34987542fcd043a059ef0140ca135a9df1eff4b02e8982c83bc857f28cc1d0a8",
       "source": "makore",
       "price": null
+    },
+    {
+      "title": "Backstreet Boys 90s Party",
+      "start": "2026-11-26T22:00:00+02:00",
+      "venue": "מועדון הדופלקס",
+      "city": "תל אביב",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://duplexclub.co.il/event/869/",
+      "source": "tickchak",
+      "price": "89.00"
+    },
+    {
+      "title": "METALLICA – THE BLACK ALBUM 35TH ANNIVERSARY PARTY!",
+      "start": "2026-11-26T22:00:00+02:00",
+      "venue": "מועדון הדופלקס",
+      "city": "תל אביב",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://duplexclub.co.il/event/2143/",
+      "source": "tickchak",
+      "price": "89.00"
+    },
+    {
+      "title": "OLD SCHOOL HIP HOP PARTY",
+      "start": "2026-11-26T22:00:00+02:00",
+      "venue": "מועדון הדופלקס",
+      "city": "תל אביב",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://duplexclub.co.il/event/2199/",
+      "source": "tickchak",
+      "price": "89.00"
     },
     {
       "title": "מסיבת העשורים הגדולה - ריקודים, תצוגות, ומלא הפתעות",
@@ -324,6 +368,28 @@
       "url": "https://www.makore.co.il/event/0117dd6d4a4e25d0aa2fb1b961279234af51f44e8eded332ca7b583e0cbf8289",
       "source": "makore",
       "price": null
+    },
+    {
+      "title": "שישי חופשי | FREE ALCOHOL ❤️",
+      "start": "2026-11-27T21:00:00Z",
+      "venue": "ברקת 9, פתח תקווה, ישראל",
+      "city": "פתח תקווה",
+      "lat": 32.084,
+      "lon": 34.8878,
+      "url": "https://www.makore.co.il/event/64445e26dc2fb5979dcbaabc0852ce7c7b14cd9ce6ae35b4a19945cdf37a5bc4",
+      "source": "makore",
+      "price": null
+    },
+    {
+      "title": "Free Alcohol 2000s Party",
+      "start": "2026-11-27T23:59:00+02:00",
+      "venue": "מועדון הדופלקס",
+      "city": "תל אביב",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://duplexclub.co.il/event/2192/",
+      "source": "tickchak",
+      "price": "119.00"
     },
     {
       "title": "עמרי סמדר X להקת מחול ליאור תבורי | DRIFT",
@@ -434,6 +500,50 @@
       "url": "https://www.makore.co.il/event/629323de3688a6f68c861acc6039a6fed03c98234e786e772ed9f258c7e94eae",
       "source": "makore",
       "price": null
+    },
+    {
+      "title": "אחרי שקיעה , לזוז - אירוע לילה במוזיאון",
+      "start": "2026-12-03T17:00:00Z",
+      "venue": "מוזיאון רמת גן לאמנות ישראלית",
+      "city": "רמת גן",
+      "lat": 32.0684,
+      "lon": 34.8248,
+      "url": "https://www.makore.co.il/event/38ac613af349341e914e6f81a1a96ab54e8f8954a69c16671781727b7f9c7041",
+      "source": "makore",
+      "price": null
+    },
+    {
+      "title": "Vini Vici",
+      "start": "2026-12-03T19:00:00Z",
+      "venue": "הדוב הירוק, הוד השרון - הפארק האקולוגי",
+      "city": "הוד השרון",
+      "lat": 32.15,
+      "lon": 34.89,
+      "url": "https://www.makore.co.il/event/17f0bef4c989eb4e5c0af5232e821e3fc7efb1fcce7f2675efdd9f9acac2e549",
+      "source": "makore",
+      "price": null
+    },
+    {
+      "title": "Silo dance celebration - DJ UBK & DJ CARMELLY",
+      "start": "2026-12-03T19:00:00Z",
+      "venue": "סילו תרבות, הוד השרון",
+      "city": "הוד השרון",
+      "lat": 32.15,
+      "lon": 34.89,
+      "url": "https://www.makore.co.il/event/e7a57d6b4716381d6a8e6232f3851316dc2e0077b581783d09c6baa89d6940b0",
+      "source": "makore",
+      "price": null
+    },
+    {
+      "title": "רוקדים לנצח מסיבת ריקודים עם ירון מידן בהדר המושבות",
+      "start": "2026-12-03T19:00:00Z",
+      "venue": "הדר המושבות",
+      "city": "פתח תקווה",
+      "lat": 32.084,
+      "lon": 34.8878,
+      "url": "https://www.makore.co.il/event/a0ec93b7e7aa4008ec0a96c3b2ef080e51a2559a6690d0daaf03e42ae89d8e24",
+      "source": "makore",
+      "price": "35"
     }
   ]
 }
