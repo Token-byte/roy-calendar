@@ -1,16 +1,16 @@
 {
-  "updatedAt": "2026-11-24T03:28:54.264732+02:00",
+  "updatedAt": "2026-11-24T16:27:25.403975+02:00",
   "sources": [
     {
       "id": "makore",
       "ok": true,
-      "count": 39,
+      "count": 42,
       "error": null
     },
     {
       "id": "tickchak",
       "ok": true,
-      "count": 7,
+      "count": 8,
       "error": null
     },
     {
@@ -40,26 +40,26 @@
   ],
   "events": [
     {
-      "title": "מסיבת קצב וריקודים",
-      "start": "2026-11-24T14:00:00Z",
-      "venue": "מועדון לאזרחים ותיקים נווה גולן, שדרות הבעש\"ט 14, תל אביב - יפו להצגת מיקום על גבי מפה >>",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/64655e259dcd9a294481790f23658ccb5b2829d15153f0ff3b6746938d4e58b7",
-      "source": "makore",
-      "price": null
-    },
-    {
       "title": "מסיבת ריקודים לטיניים לנשים 30+ | מרכז קהילתי זמיר",
       "start": "2026-11-24T18:00:00Z",
       "venue": "כפר גנים - זמיר",
       "city": "פתח תקווה",
       "lat": 32.084,
       "lon": 34.8878,
-      "url": "https://www.makore.co.il/event/e70ed2a07d0541b0c74c489fda979f7d26e0f62a350ee4d68dd968f5deb1c063",
+      "url": "https://www.makore.co.il/event/4259efe12adb8f0f2380626b3372d44abf155edd05ed315eebbfaf2250b0ff19",
       "source": "makore",
       "price": "20"
+    },
+    {
+      "title": "איתי גאלו בחממה",
+      "start": "2026-11-24T19:00:00Z",
+      "venue": "אוסישקין 1, פתח תקווה",
+      "city": "פתח תקווה",
+      "lat": 32.084,
+      "lon": 34.8878,
+      "url": "https://www.makore.co.il/event/98d8bcaac9c9b0f3a7feb8c55a32dce0ca0c0395f7f3f3170bdbc5034ee6d3e1",
+      "source": "makore",
+      "price": "40"
     },
     {
       "title": "רחבת הריקודים",
@@ -71,6 +71,17 @@
       "url": "https://www.makore.co.il/event/b5fd51ee89cf2e15bf7e52f7b18e365a281245bc79b2cf6bc5b64a6bb9e3bd5a",
       "source": "makore",
       "price": "90"
+    },
+    {
+      "title": "TUESDAY GOAT 24.11 // BACKSTAGE RECORDS",
+      "start": "2026-11-24T20:00:00Z",
+      "venue": "GOAT TLV, שדרות רוטשילד, תל אביב-יפו, ישראל",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/b67fe87ff8307b5599a3113d541565e88a78a6afac0717333b44bd8c8019573a",
+      "source": "makore",
+      "price": null
     },
     {
       "title": "MAINSTREAM PANDA | TUESDAY 24.11 | MISJORD / BAR MIZRAHI / ZNZBR | PANDA TLV",
@@ -203,6 +214,17 @@
       "url": "https://www.makore.co.il/event/a6b0dbbb9d624708d27de6464e1559445c8d751ab7c4c1bca87c02022be8b49b",
       "source": "makore",
       "price": "80"
+    },
+    {
+      "title": "ZUZU",
+      "start": "2026-11-26T20:00:00Z",
+      "venue": "טברסקי 14, תל אביב-יפו, ישראל",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/c2d0860a47030d2c3c4504da005eb5050576b8e3e3c6a6597dbf608ad414f830",
+      "source": "makore",
+      "price": null
     },
     {
       "title": "Hamishi Of JustLoveit",
@@ -359,17 +381,6 @@
       "price": null
     },
     {
-      "title": "ALL NIGHT LONG חוזרים לפינגווין | משולש הזהב | ניו לייף ★ NEW WAVE • DARK 80s • EBM",
-      "start": "2026-11-27T20:00:00Z",
-      "venue": "The wave club, יד חרוצים, תל אביב-יפו, ישראל",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/0117dd6d4a4e25d0aa2fb1b961279234af51f44e8eded332ca7b583e0cbf8289",
-      "source": "makore",
-      "price": null
-    },
-    {
       "title": "שישי חופשי | FREE ALCOHOL ❤️",
       "start": "2026-11-27T21:00:00Z",
       "venue": "ברקת 9, פתח תקווה, ישראל",
@@ -379,6 +390,17 @@
       "url": "https://www.makore.co.il/event/64445e26dc2fb5979dcbaabc0852ce7c7b14cd9ce6ae35b4a19945cdf37a5bc4",
       "source": "makore",
       "price": null
+    },
+    {
+      "title": "FREE ALCOHOL PARTY",
+      "start": "2026-11-27T23:59:00+02:00",
+      "venue": "מועדון הדופלקס",
+      "city": "תל אביב",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://duplexclub.co.il/event/837/",
+      "source": "tickchak",
+      "price": "119.00"
     },
     {
       "title": "Free Alcohol 2000s Party",
@@ -480,6 +502,17 @@
       "price": "50.00"
     },
     {
+      "title": "אירוע חנוכה - תהלוכה מסורתית ומסיבת אזניות בבית ספר המנחיל",
+      "start": "2026-12-02T14:30:00Z",
+      "venue": "ביה\"ס המנחיל",
+      "city": "רמת גן",
+      "lat": 32.0684,
+      "lon": 34.8248,
+      "url": "https://www.makore.co.il/event/f9e4f93d410a87ebf3624f85db81d9d63a71f115870c7bc7a197fb0ad120dd83",
+      "source": "makore",
+      "price": "0"
+    },
+    {
       "title": "באנו חושך לגרש, דרינק ביד יש - סיור ברים לחנוכה",
       "start": "2026-12-02T17:45:00Z",
       "venue": "בר יין ופסטה",
@@ -509,6 +542,17 @@
       "lat": 32.0684,
       "lon": 34.8248,
       "url": "https://www.makore.co.il/event/38ac613af349341e914e6f81a1a96ab54e8f8954a69c16671781727b7f9c7041",
+      "source": "makore",
+      "price": null
+    },
+    {
+      "title": "STREET BREAKDANCE PARTY לנוער",
+      "start": "2026-12-03T18:30:00Z",
+      "venue": "מרכז נהורה",
+      "city": "רמת גן",
+      "lat": 32.0684,
+      "lon": 34.8248,
+      "url": "https://www.makore.co.il/event/313336fad917c19207ecb562a4c688aa364077bdcc5cfbcd1368fe347442bbd9",
       "source": "makore",
       "price": null
     },
