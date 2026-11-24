@@ -288,39 +288,65 @@ function showStory(s){
   $('storyBack').classList.remove('hidden');
 }
 function closeStory(){ $('storyBack').classList.add('hidden'); }
-async function shareStoryImage(){
-  const s = storyModel || collectWrap('year');
-  const y = readYearbook();
+async function ensureStoryFonts(){
+  if (!(document.fonts && document.fonts.load)) return;
+  const loads = (typeof StoryCard !== 'undefined' ? StoryCard.requiredFontLoads() : [
+    '400 13px "Anton"', '400 92px "Anton"', '400 16px "Varela Round"', '700 34px "Varela Round"'
+  ]).map(spec => document.fonts.load(spec).catch(() => []));
+  await Promise.all(loads);
+  await document.fonts.ready;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+function storyFontFamily(node){
+  if (node.classList.contains('st-big') || node.classList.contains('st-eye')) return 'Anton, Impact, sans-serif';
+  return '"Varela Round", "Arial Hebrew", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+}
+async function canvasFromStoryCard(card){
+  await ensureStoryFonts();
+  const rect = card.getBoundingClientRect();
+  const scale = rect.width ? 1080 / rect.width : 3;
   const canvas = document.createElement('canvas');
   canvas.width = 1080;
-  canvas.height = 1920;
+  canvas.height = Math.max(1, Math.round((rect.height || rect.width * 16 / 9) * scale));
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#1F3FA8';
-  ctx.fillRect(0, 0, 1080, 1920);
-  ctx.fillStyle = '#d5e4ff';
-  ctx.font = '40px "Varela Round", sans-serif';
-  ctx.direction = 'rtl';
-  ctx.textAlign = 'right';
-  ctx.fillText(s.range.eye || 'WRAPPED', 1000, 180);
-  ctx.fillStyle = '#fff';
-  ctx.font = '220px Anton, Impact, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.direction = 'ltr';
-  ctx.fillText(String(s.total), 540, 480);
-  ctx.font = '48px "Varela Round", sans-serif';
-  ctx.direction = 'rtl';
-  ctx.fillText('פתקים על הלוח', 540, 560);
-  ctx.font = '42px "Varela Round", sans-serif';
-  const lines = [
-    hebCount(s.where.countries.length, 'מדינה אחת', 'מדינות') + ' · ' + hebCount(s.where.cities.length, 'עיר אחת', 'ערים'),
-    s.where.countries.map(c => c.flag).join(' '),
-    s.where.far ? 'הכי רחוק: ' + s.where.far.place + ' · ' + s.where.far.km + ' ק״מ' : '',
-    hebCount(s.sport, 'אימון אחד', 'אימונים') + ' · ' + hebCount(s.sportWeeks, 'שבוע אחד ברצף', 'שבועות ברצף'),
-    hebCount(s.interviews.length, 'ראיון אחד', 'ראיונות'),
-    y.word || '',
-    y.goal || ''
-  ].filter(Boolean);
-  lines.forEach((line, i) => ctx.fillText(line, 540, 720 + i * 90));
+  const bg = getComputedStyle(card).backgroundColor || '#1F3FA8';
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const nodes = card.querySelectorAll('.st-eye, .st-big, .st-lbl, .st-row, .st-flags, .st-far, .st-word, .st-goal');
+  nodes.forEach(node => {
+    const lines = (node.innerText || '').split(/\n/).map(s => s.trim()).filter(Boolean);
+    if (!lines.length) return;
+    const r = node.getBoundingClientRect();
+    const cs = getComputedStyle(node);
+    const size = parseFloat(cs.fontSize) * scale;
+    const weight = cs.fontWeight || '400';
+    const ltr = node.classList.contains('st-big') || node.classList.contains('st-eye');
+    ctx.font = weight + ' ' + size + 'px ' + storyFontFamily(node);
+    ctx.fillStyle = cs.color || '#fff';
+    ctx.direction = ltr ? 'ltr' : 'rtl';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    if ('letterSpacing' in ctx){
+      const spacing = parseFloat(cs.letterSpacing);
+      ctx.letterSpacing = node.classList.contains('st-eye') && isFinite(spacing) ? (spacing * scale) + 'px' : '0px';
+    }
+    const x = (r.right - rect.left) * scale;
+    const lhRaw = parseFloat(cs.lineHeight);
+    const lineHeight = (isFinite(lhRaw) ? lhRaw : parseFloat(cs.fontSize) * 1.35) * scale;
+    lines.forEach((line, i) => {
+      const y = lines.length === 1
+        ? ((r.top + r.bottom) / 2 - rect.top) * scale
+        : (r.top - rect.top) * scale + lineHeight * (i + 0.5);
+      ctx.fillText(line, x, y);
+    });
+  });
+  return canvas;
+}
+async function shareStoryImage(){
+  const y = readYearbook();
+  const s = storyModel || collectWrap('year');
+  const card = $('storyCard');
+  const canvas = await canvasFromStoryCard(card);
   const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
   const file = new File([blob], 'wrapped.png', { type: 'image/png' });
   const text = (y.word ? y.word + '. ' : '') + (y.goal || s.range.label);

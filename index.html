@@ -14,9 +14,9 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/roy-calendar/apple-touch-icon-v3.png?v=3">
 <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/roy-calendar/apple-touch-icon-precomposed.png?v=3">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Varela+Round&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/anton-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/varela-round-hebrew-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/varela-round-latin-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 <script src="config.js"></script>
 </head>
@@ -127,7 +127,7 @@
     <button class="install-x" id="installClose" aria-label="סגירה">✕</button>
     <img src="icons/icon-192.png" alt="" class="install-icon">
     <b>מתקינים את היומן במסך הבית</b>
-    <p class="muted small">ככה הוא נפתח כמו אפליקציה ושולח התראות.</p>
+    <p class="muted small">ככה הוא נפתח כמו אפליקציה. תזכורות מגיעות מגוגל קלנדר גם כשהוא סגור.</p>
     <ol class="steps" id="installSteps">
       <li><span class="n">1</span><span>לוחצים על <b>שיתוף</b> בסרגל של Safari</span>
         <svg class="ico" viewBox="0 0 24 24"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10H6a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></li>
@@ -170,6 +170,7 @@
         <option value="1440">יום לפני</option>
       </select>
     </label>
+    <p class="muted small">התזכורת נשמרת בגוגל קלנדר ומגיעה גם כשהאפליקציה סגורה. התראה מתוך האפליקציה עצמה מגיעה רק כשהיא פתוחה. לראיון ול„חשוב” נקבעת שעה לפני, אם לא בחרת זמן אחר.</p>
     <details class="more-details">
       <summary>עוד פרטים</summary>
       <label class="row"><span>תאריך סיום</span><input type="date" id="edEndDate"></label>
@@ -239,6 +240,7 @@
           <option value="1440">יום לפני</option>
         </select>
       </label>
+      <p class="muted small">לראיון ולפתק שמסומן חשוב נקבעת שעה לפני, אם לא בחרת זמן אחר. התזכורת נכתבת לגוגל.</p>
       <label class="row"><span>גם מייל תזכורת מגוגל</span><input type="checkbox" id="stEmailReminder" class="switch"></label>
       <button class="secondary" id="stYearbook">השנה שלי</button>
       <button class="secondary" id="stNotif">הפעלת התראות</button>
@@ -283,6 +285,18 @@
   <button type="button" id="vcUndo">בטל</button>
 </div>
 
+<div class="sheet-backdrop hidden" id="splitBackdrop">
+  <form class="sheet" id="splitSheet" autocomplete="off">
+    <div class="sheet-head">
+      <button type="button" class="link" id="splitCancel">ביטול</button>
+      <strong>כמה פתקים</strong>
+      <button type="submit" class="link strong">שמירה</button>
+    </div>
+    <p class="muted small">נשמע כמו כמה דברים. אפשר להוריד אחד, ואז שמירה.</p>
+    <div id="splitList"></div>
+  </form>
+</div>
+
 <div class="sheet-backdrop hidden" id="voiceBackdrop">
   <form class="sheet" id="voiceSheet" autocomplete="off">
     <div class="sheet-head">
@@ -293,7 +307,7 @@
     <p class="small" id="voiceHint"></p>
     <button type="button" class="voice-mic hidden" id="voiceMic">האזנה</button>
     <textarea id="voiceText" class="input" rows="3" placeholder="יום ראשון בשעה 12:00 טיפוס" enterkeyhint="done"></textarea>
-    <p class="muted small">באייפון, אם אין כפתור האזנה, לוחצים על המיקרופון במקלדת. קיצור: הכתבת טקסט ואז פתיחת הכתובת עם הטקסט אחרי ?add=</p>
+    <p class="muted small">באייפון, אם אין כפתור האזנה, לוחצים על המיקרופון במקלדת. „וגם” מפצל לכמה פתקים. קיצור: הכתבת טקסט ואז פתיחת הכתובת עם הטקסט אחרי ?add=</p>
   </form>
 </div>
 
@@ -305,6 +319,8 @@
 <script src="yearbook.js"></script>
 <script src="sync-keep.js"></script>
 <script src="google-auth.js"></script>
+<script src="reminders.js"></script>
+<script src="story-card.js"></script>
 <script src="year.js"></script>
 <script src="wrap.js"></script>
 <script src="app.js"></script>

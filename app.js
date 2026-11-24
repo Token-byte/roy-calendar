@@ -1,5 +1,5 @@
 'use strict';
-const VERSION = '2.3.7';
+const VERSION = '2.4.0';
 const CFG = window.APP_CONFIG || {};
 const TZ = CFG.TIME_ZONE || 'Asia/Jerusalem';
 const SCOPES = 'https://www.googleapis.com/auth/calendar';
@@ -221,6 +221,7 @@ function fromGoogle(g, cal){
   };
   if (base.royKind === 'yearbook'){
     base.readOnly = true;
+    LS.set('yearbookId', g.id);
     adoptRemoteYearbook(g.description);
     return base;
   }
@@ -236,6 +237,7 @@ function fromGoogle(g, cal){
   return base;
 }
 function toGoogle(ev){
+  if (Yearbook.isProtected(ev)) return null;
   const body = {
     summary: ev.title, location: ev.location || '', description: ev.notes || '',
     start: ev.allDay ? { date: ev.start } : { dateTime: new Date(ev.start).toISOString(), timeZone: TZ },
@@ -245,13 +247,8 @@ function toGoogle(ev){
   const cat = catOfEvent(ev);
   if (cat && cat.id !== 'chag') body.colorId = String(cat.g || nearestGColor(cat.color));
   if (ev.rrule) body.recurrence = ['RRULE:' + String(ev.rrule).replace(/^RRULE:/, '')];
-  body.extendedProperties = { private: { royCat: explicit } };
-  const overrides = [];
-  if (ev.reminder != null && ev.reminder >= 0){
-    overrides.push({ method:'popup', minutes: ev.reminder });
-    if (S.settings.emailReminder) overrides.push({ method:'email', minutes: ev.reminder });
-  }
-  body.reminders = { useDefault: false, overrides };
+  body.extendedProperties = { private: Yearbook.privateProps(ev, explicit) };
+  body.reminders = Reminders.googleReminders(ev, !!S.settings.emailReminder);
   return body;
 }
 
@@ -272,6 +269,66 @@ function migrateClientId(){
 }
 migrateClientId();
 function tokenValid(){ return S.token && S.token.exp > Date.now() + 60000; }
+let tokenArm = 0;
+let renewing = null;
+let authRenewing = false;
+function sheetOpen(){
+  const ids = ['editorBackdrop','settingsBackdrop','voiceBackdrop','splitBackdrop','yearBackdrop','wordBackdrop','storyBack'];
+  return ids.some(id => {
+    const el = document.getElementById(id);
+    return el && !el.classList.contains('hidden');
+  });
+}
+function renewState(){
+  return {
+    connected: !!S.connected,
+    online: navigator.onLine,
+    hasClient: !!clientId(),
+    standalone: useRedirectAuth(),
+    tokenExp: S.token && S.token.exp || 0,
+    now: Date.now(),
+    sheetOpen: sheetOpen(),
+    needInteractive: !!LS.get('needInteractive', false),
+    silentFailedAt: Number(LS.get('silentFailedAt', 0)) || 0,
+    oauthPendingAt: Number(LS.get('oauthPendingAt', 0)) || 0
+  };
+}
+function armTokenRefresh(){
+  clearTimeout(tokenArm);
+  if (!S.token || !S.token.exp) return;
+  const wait = S.token.exp - Date.now() - GoogleAuth.RENEW_LEAD_MS;
+  tokenArm = setTimeout(() => { maybeRenew().then(ok => { if (ok) sync(); }); }, Math.max(1500, wait));
+}
+async function maybeRenew(){
+  if (renewing) return renewing;
+  const mode = GoogleAuth.renewDecision(renewState());
+  if (mode === 'none') return tokenValid();
+  renewing = (async () => {
+    authRenewing = true;
+    if (typeof renderBanner === 'function') renderBanner();
+    try {
+      if (mode === 'gis'){
+        await requestToken('');
+        if (LS.get('oauthVia', '') !== 'redirect') LS.set('oauthVia', 'gis');
+        return true;
+      }
+      LS.set('oauthPendingAt', Date.now());
+      startRedirect({ prompt: 'none', state: 'silent' });
+      return false;
+    } catch (e) {
+      const msg = String(e && e.message || '');
+      if (/interaction_required|login_required|consent_required|access_denied|popup|no-client/i.test(msg)){
+        LS.set('needInteractive', true);
+        LS.set('silentFailedAt', Date.now());
+      }
+      return false;
+    } finally {
+      authRenewing = false;
+    }
+  })();
+  try { return await renewing; }
+  finally { renewing = null; }
+}
 function loadGIS(){
   if (window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
   if (gisLoading) return gisLoading;
@@ -300,6 +357,8 @@ function requestToken(prompt){
       if (resp.error){ reject(new Error(resp.error)); return; }
       S.token = { access_token: resp.access_token, exp: Date.now() + (Number(resp.expires_in||3600)*1000) };
       LS.set('gtoken', S.token); S.connected = true; LS.set('connected', true);
+      LS.del('needInteractive'); LS.del('silentFailedAt');
+      armTokenRefresh();
       resolve(S.token);
     };
     tokenClient.error_callback = (err) => reject(new Error(err && err.type || 'popup_failed'));
@@ -307,6 +366,9 @@ function requestToken(prompt){
   });
 }
 async function api(method, path, body){
+  if (Yearbook.blocksDelete(method, path, { knownId: LS.get('yearbookId', ''), events: S.events })){
+    throw Object.assign(new Error('yearbook'), { code: 'yearbook' });
+  }
   if (!tokenValid()) throw Object.assign(new Error('token'), { code: 401 });
   const r = await fetch(API + path, {
     method, headers: { Authorization: 'Bearer ' + S.token.access_token, 'Content-Type': 'application/json' },
@@ -365,23 +427,36 @@ async function flushOps(){
   while (S.ops.length){
     const op = S.ops[0];
     const ev = S.events[op.id];
-    if (op.kind === 'create'){
-      if (!ev){ S.ops.shift(); continue; }
-      const calId = ev.calId && ev.calId !== 'local' ? ev.calId : primaryCalId();
-      const g = await api('POST', '/calendars/' + encodeURIComponent(calId) + '/events', toGoogle(ev));
-      delete S.events[op.id];
-      const cal = S.calendars.find(c => c.id === calId) || { id: calId, accessRole: 'owner' };
-      S.events[g.id] = fromGoogle(g, cal);
-      S.ops.forEach(o => { if (o.id === op.id) o.id = g.id; });
-    } else if (op.kind === 'update'){
-      if (!ev){ S.ops.shift(); continue; }
-      const g = await api('PATCH', '/calendars/' + encodeURIComponent(ev.calId) + '/events/' + encodeURIComponent(ev.id), toGoogle(ev));
-      const cal = S.calendars.find(c => c.id === ev.calId) || { id: ev.calId, accessRole: 'owner' };
-      S.events[g.id] = fromGoogle(g, cal);
-    } else if (op.kind === 'delete'){
+    if (op.kind === 'delete'){
+      const blocked = Yearbook.blocksDelete('DELETE', '/calendars/x/events/' + encodeURIComponent(op.id), {
+        knownId: LS.get('yearbookId', ''), event: ev, events: S.events
+      });
+      if (blocked){ S.ops.shift(); saveOps(); continue; }
       try { await api('DELETE', '/calendars/' + encodeURIComponent(op.calId) + '/events/' + encodeURIComponent(op.id)); }
-      catch(e){ if (e.code !== 404 && e.code !== 410) throw e; }
+      catch(e){
+        if (e.code === 'yearbook'){ S.ops.shift(); saveOps(); continue; }
+        if (e.code !== 404 && e.code !== 410) throw e;
+      }
       delete S.events[op.id];
+    } else if (op.kind === 'create' || op.kind === 'update'){
+      const yearbookId = LS.get('yearbookId', '');
+      if (!ev || Yearbook.isProtected(ev) || (yearbookId && op.id === yearbookId)){ S.ops.shift(); saveOps(); continue; }
+      const body = toGoogle(ev);
+      if (!body){ S.ops.shift(); saveOps(); continue; }
+      if (op.kind === 'create'){
+        const calId = ev.calId && ev.calId !== 'local' ? ev.calId : primaryCalId();
+        const g = await api('POST', '/calendars/' + encodeURIComponent(calId) + '/events', body);
+        delete S.events[op.id];
+        const cal = S.calendars.find(c => c.id === calId) || { id: calId, accessRole: 'owner' };
+        S.events[g.id] = fromGoogle(g, cal);
+        S.ops.forEach(o => { if (o.id === op.id) o.id = g.id; });
+      } else {
+        const g = await api('PATCH', '/calendars/' + encodeURIComponent(ev.calId) + '/events/' + encodeURIComponent(ev.id), body);
+        const cal = S.calendars.find(c => c.id === ev.calId) || { id: ev.calId, accessRole: 'owner' };
+        S.events[g.id] = fromGoogle(g, cal);
+      }
+    } else {
+      S.ops.shift(); saveOps(); continue;
     }
     S.ops.shift(); saveOps(); saveEvents();
   }
@@ -399,9 +474,15 @@ function accountLabel(){
 async function sync(opts = {}){
   if (!S.connected || !clientId()) { renderBanner(); return; }
   if (!navigator.onLine){ renderBanner(); return; }
-  if (!tokenValid()){ renderBanner(); return; }
+  const mode = GoogleAuth.renewDecision(renewState());
+  if (!tokenValid() || mode !== 'none'){
+    await maybeRenew();
+    if (mode === 'redirect') return;
+    if (!tokenValid()){ renderBanner(); return; }
+  }
   if (S.syncing) return;
-  S.syncing = true; 
+  S.syncing = true;
+  let retry = null;
   try {
     if (!S.calendars.length || opts.calendars || Date.now() - lastFullSync > 30*60000){ await loadCalendars(); lastFullSync = Date.now(); }
     enqueueUnsynced();
@@ -423,14 +504,18 @@ async function sync(opts = {}){
     await syncYearbook();
   } catch(e){
     console.warn('sync', e);
-    if (e.code !== 401) toast('שגיאת סנכרון: ' + e.message);
-    if (S.ops.length && syncRetries < 3 && e.code !== 401){
+    if (e.code === 401 && !opts.renewed){
+      const ok = await maybeRenew();
+      if (ok && tokenValid()) retry = Object.assign({}, opts, { renewed: true });
+    } else if (e.code !== 401 && e.code !== 'yearbook') toast('שגיאת סנכרון: ' + e.message);
+    if (!retry && S.ops.length && syncRetries < 3 && e.code !== 401 && e.code !== 'yearbook'){
       syncRetries++;
       setTimeout(() => sync(), 15000);
     }
   } finally {
     S.syncing = false; render(); scheduleNotifications();
   }
+  if (retry) return sync(retry);
 }
 function adoptRemoteYearbook(text){
   const remote = Yearbook.parse(text);
@@ -466,6 +551,7 @@ async function syncYearbook(){
       if (!parsed) continue;
       if (!remote || parsed.updatedAt >= remote.updatedAt){ remote = parsed; remoteEv = g; }
     }
+    if (remoteEv) LS.set('yearbookId', remoteEv.id);
     const chosen = Yearbook.merge(local, remote);
     if (remote && chosen.updatedAt === remote.updatedAt && chosen.updatedAt !== local.updatedAt){
       LS.set('yearbook', chosen);
@@ -473,8 +559,13 @@ async function syncYearbook(){
     }
     if (!Yearbook.hasContent(chosen)) return;
     const body = yearbookBody(chosen.updatedAt ? chosen : local);
-    if (remoteEv) await api('PATCH', '/calendars/' + encodeURIComponent(primaryCalId()) + '/events/' + encodeURIComponent(remoteEv.id), body);
-    else await api('POST', '/calendars/' + encodeURIComponent(primaryCalId()) + '/events', body);
+    if (remoteEv){
+      LS.set('yearbookId', remoteEv.id);
+      await api('PATCH', '/calendars/' + encodeURIComponent(primaryCalId()) + '/events/' + encodeURIComponent(remoteEv.id), body);
+    } else {
+      const created = await api('POST', '/calendars/' + encodeURIComponent(primaryCalId()) + '/events', body);
+      if (created && created.id) LS.set('yearbookId', created.id);
+    }
   } catch(e){
     console.warn('yearbook', e);
   } finally {
@@ -512,6 +603,10 @@ function setEventCategory(id, catId){
   if (!(S.connected && tokenValid())) toast('הקטגוריה נשמרה במכשיר ותיכתב לגוגל אחרי ההתחברות');
 }
 function queue(kind, ev){
+  if (kind === 'delete' && ev && (Yearbook.isProtected(ev) || (ev.id && ev.id === LS.get('yearbookId', '')))){
+    toast('אי אפשר למחוק את „יומן שנה”. שם שמורים הסיכומים.');
+    return;
+  }
   if (kind === 'update' && S.ops.some(o => o.id === ev.id && o.kind === 'create')) { saveOps(); return; }
   if (kind === 'delete'){
     const hadCreate = S.ops.some(o => o.id === ev.id && o.kind === 'create');
@@ -657,8 +752,12 @@ function renderBanner(){
     msg = 'הפתקים נשמרים רק במכשיר הזה. הם לא בגוגל (' + who + ') ולא עוברים לטלפון או למק אחר.';
     action = 'התחברות'; fn = () => connectInteractive();
   } else if (!tokenValid()){
-    msg = 'החיבור לגוגל פג. פתקים חדשים מחכים במכשיר עד חיבור מחדש.';
-    action = 'חיבור מחדש'; fn = () => connectInteractive();
+    if (authRenewing){
+      msg = 'מחדש את החיבור לגוגל. הפתקים נשארים במכשיר ויישלחו ברגע שהחיבור חוזר.';
+    } else {
+      msg = 'החיבור לגוגל פג. פתקים שנשמרו במכשיר יישלחו אוטומטית אחרי החיבור, ואף פתק לא נמחק.';
+      action = 'חיבור מחדש'; fn = () => connectInteractive();
+    }
   } else if (S.ops.length){
     msg = 'יש ' + S.ops.length + ' שינויים שעדיין לא נכתבו לגוגל. הם יישלחו שוב אוטומטית.';
     action = 'שליחה'; fn = () => sync({ calendars: true });
@@ -719,8 +818,9 @@ function openEditor(ev, presetKey, presetHour){
   $('edStart').value = st; $('edEnd').value = en;
   $('edLocation').value = ev ? ev.location : ''; $('edNotes').value = ev ? ev.notes : '';
   const rem = ev ? (ev.reminder == null ? S.settings.defaultReminder : ev.reminder) : S.settings.defaultReminder;
-  const sel = $('edReminder'); sel.value = String(rem);
-  if (sel.value !== String(rem)){ const o = document.createElement('option'); o.value = rem; o.textContent = rem + ' דק׳ לפני'; sel.appendChild(o); sel.value = String(rem); }
+  remLocked = !!ev;
+  if (ev) setReminderSelect(rem);
+  else applySmartReminder();
   edCat = ev ? (ev.cat || null) : null;
   renderEdCats();
   toggleTimes();
@@ -728,6 +828,27 @@ function openEditor(ev, presetKey, presetHour){
   if (warn) warn.classList.toggle('hidden', !!(S.connected && tokenValid()));
   $('editorBackdrop').classList.remove('hidden');
   if (!ev) setTimeout(() => $('edTitle').focus(), 250);
+}
+let remLocked = false;
+function setReminderSelect(rem){
+  const sel = $('edReminder');
+  if (!sel) return;
+  sel.value = String(rem);
+  if (sel.value !== String(rem)){
+    const o = document.createElement('option');
+    o.value = rem;
+    o.textContent = rem + ' דק׳ לפני';
+    sel.appendChild(o);
+    sel.value = String(rem);
+  }
+}
+function applySmartReminder(){
+  if (remLocked || !$('edTitle')) return;
+  setReminderSelect(Reminders.defaultMinutes({
+    title: $('edTitle').value,
+    catId: edCat || '',
+    settingsDefault: S.settings.defaultReminder
+  }));
 }
 function renderEdCats(){
   const auto = categoryOf($('edTitle').value);
@@ -763,6 +884,10 @@ function deleteEditing(){
   if (editing.recurring && !confirm('זה אירוע חוזר. למחוק רק את המופע הזה?')) return;
   if (!editing.recurring && !confirm('למחוק את האירוע?')) return;
   const ev = S.events[editing.id] || editing;
+  if (Yearbook.isProtected(ev)){
+    toast('אי אפשר למחוק את „יומן שנה”. שם שמורים הסיכומים.');
+    return;
+  }
   queue('delete', ev);
   delete S.events[ev.id]; saveEvents();
   closeEditor(); render(); scheduleNotifications();
@@ -805,7 +930,7 @@ async function fireNotification(ev, fkey){
 }
 async function enableNotifications(){
   if (!('Notification' in window)){
-    $('stNotifStatus').textContent = 'בטלפון צריך קודם להוסיף את האפליקציה למסך הבית (שיתוף ← הוספה למסך הבית) ולפתוח אותה משם.';
+    $('stNotifStatus').textContent = 'בטלפון מוסיפים את האפליקציה למסך הבית. גם אז, התראה מתוכה מגיעה רק כשהיא פתוחה. תזכורת בפתק נשמרת בגוגל ומגיעה גם כשהיא סגורה.';
     return;
   }
   const p = await Notification.requestPermission();
@@ -814,8 +939,12 @@ async function enableNotifications(){
 }
 function updateNotifStatus(){
   const el = $('stNotifStatus');
-  if (!('Notification' in window)) { el.textContent = 'התראות זמינות באייפון רק כשהאפליקציה מותקנת במסך הבית.'; return; }
-  el.textContent = { granted: 'התראות פעילות. הן מגיעות כשהאפליקציה פתוחה או ברקע.', denied: 'ההתראות חסומות. אפשר להפעיל בהגדרות האייפון ← התראות ← יומן.', default: 'ההתראות עוד לא הופעלו.' }[Notification.permission];
+  if (!('Notification' in window)) { el.textContent = 'התראה מתוך האפליקציה באייפון זמינה רק כשהיא מותקנת במסך הבית, ורק כשהיא פתוחה. תזכורת שנשמרת בגוגל מגיעה גם כשהיא סגורה.'; return; }
+  el.textContent = {
+    granted: 'התראה מתוך האפליקציה מגיעה רק כשהיא פתוחה. תזכורת שנבחרה בפתק נשמרת בגוגל ומגיעה גם כשהאפליקציה סגורה.',
+    denied: 'ההתראות של האפליקציה חסומות. תזכורת בגוגל עדיין יכולה להגיע מאפליקציית היומן.',
+    default: 'התראה מתוך האפליקציה עוד לא הופעלה, והיא מגיעה רק כשהאפליקציה פתוחה. תזכורת בפתק נשמרת בגוגל ומגיעה גם כשהיא סגורה.'
+  }[Notification.permission];
 }
 
 /* ---------- settings ---------- */
@@ -909,11 +1038,14 @@ function consumeAuthReturn(){
   if (!parsed) return false;
   history.replaceState(null, '', location.pathname + location.search);
   const expect = LS.get('oauthState', '');
+  LS.del('oauthPendingAt');
   if (expect && parsed.state && parsed.state !== expect) return false;
   LS.del('oauthState');
   if (parsed.error){
-    if (parsed.state === 'silent') LS.set('needInteractive', true);
-    else toast(parsed.error === 'redirect_uri_mismatch' ? 'צריך להוסיף את כתובת החזרה בהגדרות גוגל' : 'ההתחברות לא הושלמה');
+    if (parsed.state === 'silent' || expect === 'silent'){
+      LS.set('needInteractive', true);
+      LS.set('silentFailedAt', Date.now());
+    } else toast(parsed.error === 'redirect_uri_mismatch' ? 'צריך להוסיף את כתובת החזרה בהגדרות גוגל' : 'ההתחברות לא הושלמה');
     return false;
   }
   if (!parsed.access_token) return false;
@@ -923,13 +1055,15 @@ function consumeAuthReturn(){
   LS.set('connected', true);
   LS.set('oauthVia', 'redirect');
   LS.del('needInteractive');
+  LS.del('silentFailedAt');
   LS.set('justConnected', true);
+  armTokenRefresh();
   return true;
 }
-function shouldSilentRenew(){
-  return S.connected && clientId() && !tokenValid() && LS.get('oauthVia', '') === 'redirect' && !LS.get('needInteractive', false);
-}
 function connectInteractive(){
+  LS.del('needInteractive');
+  LS.del('silentFailedAt');
+  LS.del('oauthPendingAt');
   if (!takeTypedClientId()) return;
   if (!clientId()){ openGoogle(); toast('קודם מדביקים את מפתח החיבור'); const box = $('gSetup'); if (box) box.open = true; $('stClientId').focus(); return; }
   if (useRedirectAuth()) startRedirect({ prompt: 'consent' });
@@ -953,8 +1087,10 @@ function renderGoogleSettings(){
   const n = localNoteCount();
   $('stGoogleStatus').textContent = !has ? 'חסר מפתח' : ok ? 'מחובר' : (S.connected ? 'החיבור פג' : 'לא מחובר');
   $('stGoogleExplain').textContent = ok
-    ? ('מחובר כ-' + who + '. כל פתק חדש, עריכה, מחיקה וקטגוריה נכתבים ליומן הראשי בגוגל, ואז מגיעים לכל מכשיר שמחובר לאותו חשבון.' + (last ? ' סנכרון אחרון ' + hm(new Date(last)) + '.' : ''))
-    : ('החשבון הוא ' + (CFG.LOGIN_HINT || who) + '. החיבור נשמר רק באפליקציה הזו. אם גוגל אומרת שהאפליקציה לא מאומתת, לוחצים Advanced ואז Continue (או מתקדם ואז המשך), ואז Allow.');
+    ? ('מחובר כ-' + who + '. כל פתק חדש, עריכה, מחיקה וקטגוריה נכתבים ליומן הראשי בגוגל, ואז מגיעים לכל מכשיר שמחובר לאותו חשבון. החיבור מתחדש לבד כשפותחים את האפליקציה.' + (last ? ' סנכרון אחרון ' + hm(new Date(last)) + '.' : ''))
+    : (S.connected
+      ? 'החיבור פג אחרי כשעה. פתיחת האפליקציה מחדשת אותו לבד, בלי מסך הסכמה. פתקים שנשארו במכשיר עולים לגוגל ברגע שהחיבור חוזר. אם גוגל מבקשת אישור, לוחצים חיבור מחדש.'
+      : ('החשבון הוא ' + (CFG.LOGIN_HINT || who) + '. החיבור נשמר רק באפליקציה הזו. אם גוגל אומרת שהאפליקציה לא מאומתת, לוחצים Advanced ואז Continue (או מתקדם ואז המשך), ואז Allow.'));
   $('stConnect').classList.toggle('hidden', ok);
   $('stConnect').textContent = S.connected ? 'חיבור מחדש לגוגל' : 'התחברות לגוגל';
   const upload = $('stUploadLocal');
@@ -1082,7 +1218,7 @@ function bind(){
   ['grid','timelineWrap','dayHead'].forEach(id => { $(id).addEventListener('touchstart', onStart, { passive: true }); $(id).addEventListener('touchend', onEnd); });
 
   $('editor').addEventListener('submit', saveEditor);
-  $('edCancel').onclick = closeEditor;
+  $('edCancel').onclick = () => { closeEditor(); if (S.connected && !tokenValid()) sync(); };
   $('edDelete').onclick = deleteEditing;
   $('edAllDay').onchange = toggleTimes;
   $('edDate').onchange = () => { if ($('edEndDate').value < $('edDate').value) $('edEndDate').value = $('edDate').value; };
@@ -1090,11 +1226,12 @@ function bind(){
     const [h, m] = $('edStart').value.split(':').map(Number);
     if ($('edDate').value === $('edEndDate').value && $('edEnd').value <= $('edStart').value){ $('edEnd').value = pad(Math.min(h+1,23)) + ':' + pad(m); }
   };
-  $('edCats').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const auto = categoryOf($('edTitle').value); edCat = (edCat === b.dataset.cat || (!edCat && auto && auto.id === b.dataset.cat)) ? null : b.dataset.cat; renderEdCats(); });
-  $('edTitle').addEventListener('input', renderEdCats);
+  $('edCats').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const auto = categoryOf($('edTitle').value); edCat = (edCat === b.dataset.cat || (!edCat && auto && auto.id === b.dataset.cat)) ? null : b.dataset.cat; renderEdCats(); applySmartReminder(); });
+  $('edTitle').addEventListener('input', () => { renderEdCats(); applySmartReminder(); });
+  $('edReminder').addEventListener('change', () => { remLocked = true; });
   $('editorBackdrop').addEventListener('click', e => { if (e.target.id === 'editorBackdrop') closeEditor(); });
 
-  $('stClose').onclick = () => $('settingsBackdrop').classList.add('hidden');
+  $('stClose').onclick = () => { $('settingsBackdrop').classList.add('hidden'); if (S.connected && !tokenValid()) sync(); };
   if ($('themeList')) $('themeList').addEventListener('click', e => {
     const b = e.target.closest('[data-theme]'); if (!b) return;
     S.settings.posterTheme = b.dataset.theme;
@@ -1104,7 +1241,7 @@ function bind(){
     if (S.view === 'year' && typeof renderYear === 'function'){ /* colors are CSS variables */ }
     if (S.view === 'wrap' && typeof renderWrap === 'function') renderWrap();
   });
-  $('settingsBackdrop').addEventListener('click', e => { if (e.target.id === 'settingsBackdrop') $('settingsBackdrop').classList.add('hidden'); });
+  $('settingsBackdrop').addEventListener('click', e => { if (e.target.id === 'settingsBackdrop'){ $('settingsBackdrop').classList.add('hidden'); if (S.connected && !tokenValid()) sync(); } });
   $('stConnect').onclick = () => connectInteractive();
   if ($('stUploadLocal')) $('stUploadLocal').onclick = () => uploadLocalNotes();
   if ($('edConnect')) $('edConnect').onclick = () => {
@@ -1169,6 +1306,7 @@ function bind(){
       render(); scheduleNotifications(); sync();
     }
   });
+  window.addEventListener('pageshow', e => { if (e.persisted) sync(); });
   setInterval(() => { if (document.visibilityState === 'visible'){ if (S.view === 'day') renderDay(); sync(); } }, 5*60000);
 }
 let lastVisibleToday = todayKey();
@@ -1213,14 +1351,18 @@ requestAnimationFrame(() => {
   }
 });
 fetchedMonths.add(S.cursor);
-if (shouldSilentRenew()) startRedirect({ prompt: 'none', state: 'silent' });
-else {
+armTokenRefresh();
+(async () => {
+  const mode = GoogleAuth.renewDecision(renewState());
+  if (mode !== 'none'){
+    await maybeRenew();
+    if (mode === 'redirect') return;
+  }
   const waiting = LS.get('justConnected', false) ? localNoteCount() : 0;
   if (LS.get('justConnected', false)) LS.del('justConnected');
-  sync({ calendars: true }).then(() => {
-    if (!resumedAuth && !waiting) return;
-    const who = accountLabel();
-    toast(waiting ? ('מחובר כ-' + who + '. מעלה ' + waiting + ' פתקים לגוגל') : ('מחובר כ-' + who));
-  });
-}
+  await sync({ calendars: true });
+  if (!resumedAuth && !waiting) return;
+  const who = accountLabel();
+  toast(waiting ? ('מחובר כ-' + who + '. מעלה ' + waiting + ' פתקים לגוגל') : ('מחובר כ-' + who));
+})();
 scheduleNotifications();

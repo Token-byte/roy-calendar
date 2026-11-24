@@ -45,5 +45,26 @@
       state: q.get('state') || ''
     };
   }
-  return { redirectUri, buildGoogleAuthUrl, parseOAuthHash, resolveClientId, PAGES_REDIRECT };
+  const RENEW_LEAD_MS = 5 * 60 * 1000;
+  const SILENT_RETRY_MS = 6 * 60 * 60 * 1000;
+  const REDIRECT_COOLDOWN_MS = 90 * 1000;
+  function renewDecision(s){
+    s = s || {};
+    const now = Number(s.now) || 0;
+    if (!s.connected || !s.online || !s.hasClient) return 'none';
+    if (s.sheetOpen) return 'none';
+    const exp = Number(s.tokenExp) || 0;
+    if (exp > now + RENEW_LEAD_MS) return 'none';
+    const pendingAt = Number(s.oauthPendingAt) || 0;
+    if (pendingAt && now - pendingAt < REDIRECT_COOLDOWN_MS) return 'none';
+    if (s.needInteractive){
+      const failedAt = Number(s.silentFailedAt) || 0;
+      if (!failedAt || now - failedAt < SILENT_RETRY_MS) return 'none';
+    }
+    return s.standalone ? 'redirect' : 'gis';
+  }
+  return {
+    redirectUri, buildGoogleAuthUrl, parseOAuthHash, resolveClientId, renewDecision,
+    RENEW_LEAD_MS, SILENT_RETRY_MS, REDIRECT_COOLDOWN_MS, PAGES_REDIRECT
+  };
 });

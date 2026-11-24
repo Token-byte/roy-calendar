@@ -1,5 +1,6 @@
-const CACHE = 'roy-cal-v2.3.7';
-const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'year.js', 'parse-he.js', 'cats-auto.js', 'holidays.js', 'categories.json', 'places.js', 'wrap-extra.js', 'yearbook.js', 'sync-keep.js', 'google-auth.js', 'wrap.js', 'voice.js', 'config.js', 'manifest.webmanifest',
+const CACHE = 'roy-cal-v2.4.0';
+const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'year.js', 'parse-he.js', 'cats-auto.js', 'holidays.js', 'categories.json', 'places.js', 'wrap-extra.js', 'yearbook.js', 'sync-keep.js', 'google-auth.js', 'reminders.js', 'story-card.js', 'wrap.js', 'voice.js', 'config.js', 'manifest.webmanifest',
+  'fonts/anton-400.woff2', 'fonts/varela-round-hebrew-400.woff2', 'fonts/varela-round-latin-400.woff2',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-512-maskable.png',
   'apple-touch-icon-v3.png', 'apple-touch-icon.png', 'apple-touch-icon-precomposed.png'];
 self.addEventListener('install', e => {
