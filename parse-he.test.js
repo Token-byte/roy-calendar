@@ -55,7 +55,7 @@ for (const [input, expect] of cases){
 
 const diary = parseHebrewEvents('היום היה לי פגישה עם ליעם וגם יצאתי לרוץ וגם התחלתי לקרוא ספר', NOW);
 assert.strictEqual(diary.length, 3);
-assert.deepStrictEqual(diary.map(ev => ev.title), ['פגישה עם ליעם', 'לרוץ', 'לקרוא ספר']);
+assert.deepStrictEqual(diary.map(ev => ev.title), ['פגישה עם ליעם', 'ריצה', 'לקרוא ספר']);
 diary.forEach(ev => {
   assert.strictEqual(ev.date, '2026-11-21');
   assert.strictEqual(ev.allDay, true);
@@ -86,5 +86,54 @@ const thursday = parseHebrewEvents('ביום חמישי פגישה וגם ספר
 assert.strictEqual(thursday[0].date, '2026-11-26');
 assert.strictEqual(thursday[1].date, '2026-11-26');
 assert.strictEqual(thursday[1].title, 'ספר');
+
+const roy = parseHebrewEvents('הבאתי את המתנה של אמה הלכתי לטפס למדתי להכין מרק תירס והלכתי לישון אצל פולי', NOW);
+assert.deepStrictEqual(roy.map(ev => ev.title), [
+  'הבאתי את המתנה של אמה',
+  'טיפוס',
+  'למדתי להכין מרק תירס',
+  'ישנתי אצל פולי'
+]);
+roy.forEach(ev => {
+  assert.strictEqual(ev.date, '2026-11-21');
+  assert.strictEqual(ev.allDay, true);
+  assert.strictEqual(ev.time, null);
+});
+
+const connectors = [
+  ['הבאתי מתנה גם הלכתי לטפס', ['הבאתי מתנה', 'טיפוס']],
+  ['קניתי חלב ואז הלכתי לרוץ', ['קניתי חלב', 'ריצה']],
+  ['עבדתי אחר כך ישנתי', ['עבדתי', 'ישנתי']],
+  ['הבאתי מתנה, הלכתי לטפס', ['הבאתי מתנה', 'טיפוס']],
+  ['הבאתי מתנה. הלכתי לישון אצל פולי', ['הבאתי מתנה', 'ישנתי אצל פולי']]
+];
+for (const [input, titles] of connectors){
+  assert.deepStrictEqual(parseHebrewEvents(input, NOW).map(ev => ev.title), titles, input);
+}
+
+function one(input){
+  const many = parseHebrewEvents(input, NOW);
+  assert.strictEqual(many.length, 1, input);
+  return many[0];
+}
+const meet = one('פגישה עם ליעם בשעה 12');
+assert.strictEqual(meet.title, 'פגישה עם ליעם');
+assert.strictEqual(meet.time, '12:00');
+assert.strictEqual(meet.allDay, false);
+const soup = one('למדתי להכין מרק');
+assert.strictEqual(soup.title, 'למדתי להכין מרק');
+assert.strictEqual(soup.allDay, true);
+const interview = one('מחר ב 10 ראיון עבודה');
+assert.strictEqual(interview.title, 'ראיון עבודה');
+assert.strictEqual(interview.date, '2026-11-22');
+assert.strictEqual(interview.time, '10:00');
+assert.strictEqual(interview.allDay, false);
+one('הלכתי לטפס');
+assert.strictEqual(one('5.12 ביטוח לאומי').title, 'ביטוח לאומי');
+
+const { autoCategoryId } = require('./cats-auto.js');
+assert.strictEqual(autoCategoryId('טיפוס'), 'sport');
+assert.strictEqual(autoCategoryId('ישנתי אצל פולי'), 'family');
+assert.strictEqual(autoCategoryId('ראיון עבודה'), 'work');
 
 console.log(cases.length + ' parser cases passed');

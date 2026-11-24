@@ -498,6 +498,7 @@ function openSheet(k){
     return '<div class="y-ev" data-id="' + esc(ev.id) + '"><button type="button" class="y-item"><i class="' + kind + '"></i><span class="y-tm">' + esc(tm) + '</span><span class="y-bd"><b>' + esc(eventTitle(ev, k)) + '</b>' + sub + '</span></button>' + (chips ? '<div class="y-setcats">' + chips + '</div>' : '') + '</div>';
   }).join('');
   const sheet = $('ySheet');
+  sheet.dataset.k = k;
   sheetOpenedAt = Date.now();
   sheet.style.transform = '';
   sheet.classList.remove('hidden');

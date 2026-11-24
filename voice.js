@@ -147,8 +147,18 @@ function saveSplit(e){
   else if (typeof renderBanner === 'function') renderBanner();
   toast('נשמרו ' + parts.length + ' פתקים');
 }
+let voiceDay = '';
+function openVoiceOnDay(k){
+  voiceDay = k || '';
+  openVoice();
+}
 function createFromPhrase(text){
+  const day = voiceDay;
+  voiceDay = '';
   const many = HeParse.parseHebrewEvents(text, new Date());
+  if (day && many.length && !many[0].explicitDate){
+    many.forEach(p => { if (!p.explicitDate) p.date = day; });
+  }
   if (!many.length || !many[0].title){ toast('לא הבנתי את המשפט'); return; }
   if (many.length === 1){ commitParsed(many[0], false); return; }
   const parts = many.filter(p => p.title && p.title !== 'אירוע');
@@ -209,13 +219,18 @@ function openVoice(){
     startListen();
   } else {
     mic.classList.add('hidden');
-    $('voiceHint').textContent = 'באייפון מכתיבים עם המיקרופון שעל המקלדת.';
+    $('voiceHint').textContent = 'באייפון מכתיבים עם המיקרופון שעל המקלדת. כמה פעולות במשפט אחד הופכות לכמה פתקים.';
     setTimeout(() => $('voiceText').focus(), 60);
   }
 }
 function initVoice(){
-  $('micBtn').onclick = openVoice;
-  $('voiceCancel').onclick = closeVoice;
+  $('micBtn').onclick = () => { voiceDay = ''; openVoice(); };
+  if ($('ySheetMic')) $('ySheetMic').onclick = () => {
+    const sheet = $('ySheet');
+    const k = (sheet && sheet.dataset.k) || (typeof Y !== 'undefined' && Y.selected) || S.sel;
+    openVoiceOnDay(k);
+  };
+  $('voiceCancel').onclick = () => { voiceDay = ''; closeVoice(); };
   $('voiceMic').onclick = () => { if (voiceRec) stopListen(); else startListen(); };
   $('voiceSheet').addEventListener('submit', e => {
     e.preventDefault();
