@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-25T01:23:19.429792+02:00",
+  "updatedAt": "2026-11-25T15:45:30.141577+02:00",
   "sources": [
     {
       "id": "makore",
@@ -9,9 +9,9 @@
     },
     {
       "id": "tickchak",
-      "ok": true,
-      "count": 8,
-      "error": null
+      "ok": false,
+      "count": 0,
+      "error": "TimeoutError: The read operation timed out"
     },
     {
       "id": "go-out",
@@ -69,6 +69,17 @@
       "lat": 32.0853,
       "lon": 34.7818,
       "url": "https://www.makore.co.il/event/2434128a172bdd6bada5f9095b0b414b7c89a1b54b3230736d41a939298ab9d6",
+      "source": "makore",
+      "price": null
+    },
+    {
+      "title": "Mackor Wednesday",
+      "start": "2026-11-25T21:00:00Z",
+      "venue": "Rothschild Boulevard 6, תל אביב-יפו, ישראל",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/b6a40c1c16f3d1e4504143eafb37a2bb9872e7753957cbc49bc331c29e9189b8",
       "source": "makore",
       "price": null
     },
@@ -194,6 +205,17 @@
       "price": "203.50"
     },
     {
+      "title": "THURSDAY 26.11 | Dorè b2b Yutta / I-ZED / Pazell / Dannilo | PANDA TLV",
+      "start": "2026-11-26T20:30:00Z",
+      "venue": "נחלת בנימין 52, תל אביב-יפו, ישראל",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/8550c4c9084d56b2976e85bd6ed5e941edf6cacc9ad4d68bc2ff98dd59ae53c2",
+      "source": "makore",
+      "price": null
+    },
+    {
       "title": "Thursday Moon במון צ'יילד · מיינסטרים",
       "start": "2026-11-26T20:30:00Z",
       "venue": "📍 מון צ'יילד נמל תל אביב · תל אביב",
@@ -203,6 +225,17 @@
       "url": "https://www.makore.co.il/event/a0ca72cfeecd3f8fdd63d8a720f4832877da35ac243614f74f31798412769742",
       "source": "makore",
       "price": "109"
+    },
+    {
+      "title": "OUT OF MIND PRS : THURSDAY 26/11",
+      "start": "2026-11-26T21:00:00Z",
+      "venue": "תל אביב, ישראל",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/2a8625019c8d11a1bdabed91fd3d6c96343ee50fc4e87893113b4b39819fc67a",
+      "source": "makore",
+      "price": null
     },
     {
       "title": "THURSDAY JIMMYwHO X MAINsTREAM❤️",
@@ -236,39 +269,6 @@
       "url": "https://www.makore.co.il/event/34987542fcd043a059ef0140ca135a9df1eff4b02e8982c83bc857f28cc1d0a8",
       "source": "makore",
       "price": null
-    },
-    {
-      "title": "Backstreet Boys 90s Party",
-      "start": "2026-11-26T22:00:00+02:00",
-      "venue": "מועדון הדופלקס",
-      "city": "תל אביב",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://duplexclub.co.il/event/869/",
-      "source": "tickchak",
-      "price": "89.00"
-    },
-    {
-      "title": "METALLICA – THE BLACK ALBUM 35TH ANNIVERSARY PARTY!",
-      "start": "2026-11-26T22:00:00+02:00",
-      "venue": "מועדון הדופלקס",
-      "city": "תל אביב",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://duplexclub.co.il/event/2143/",
-      "source": "tickchak",
-      "price": "89.00"
-    },
-    {
-      "title": "OLD SCHOOL HIP HOP PARTY",
-      "start": "2026-11-26T22:00:00+02:00",
-      "venue": "מועדון הדופלקס",
-      "city": "תל אביב",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://duplexclub.co.il/event/2199/",
-      "source": "tickchak",
-      "price": "89.00"
     },
     {
       "title": "מסיבת העשורים הגדולה - ריקודים, תצוגות, ומלא הפתעות",
@@ -326,39 +326,6 @@
       "price": null
     },
     {
-      "title": "חיי לילה בתל אביב: סבב ברים מטורף עם תיירים מכל העולם",
-      "start": "2026-11-27T20:00:00Z",
-      "venue": "יהודה הלוי, תל אביב-יפו",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/027f228bd5c16310b4d06d46353a8c7d4dd4f8930b40471e1f23815a6ec456ed",
-      "source": "makore",
-      "price": "מבוגר: ₪85"
-    },
-    {
-      "title": "HIVE ROTCHILD",
-      "start": "2026-11-27T20:00:00Z",
-      "venue": "שדרות רוטשילד 33, תל אביב-יפו, ישראל",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/2dd3ae9c706921829bc2ad29f1e152cd2d344eea757d4d06b6595d484a5a80f7",
-      "source": "makore",
-      "price": null
-    },
-    {
-      "title": "סבב ברים שמח בתל אביב!!!🍻",
-      "start": "2026-11-27T20:00:00Z",
-      "venue": "יהודה לוי 47 (צ'ופיטוס בר)",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/6407d563274552341a3a14dc06a9a68a97b5f11a126e95fa86a6438cb80c3e57",
-      "source": "makore",
-      "price": "80"
-    },
-    {
       "title": "שישי חופשי | FREE ALCOHOL ❤️",
       "start": "2026-11-27T21:00:00Z",
       "venue": "ברקת 9, פתח תקווה, ישראל",
@@ -368,61 +335,6 @@
       "url": "https://www.makore.co.il/event/64445e26dc2fb5979dcbaabc0852ce7c7b14cd9ce6ae35b4a19945cdf37a5bc4",
       "source": "makore",
       "price": null
-    },
-    {
-      "title": "FREE ALCOHOL PARTY",
-      "start": "2026-11-27T23:59:00+02:00",
-      "venue": "מועדון הדופלקס",
-      "city": "תל אביב",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://duplexclub.co.il/event/837/",
-      "source": "tickchak",
-      "price": "119.00"
-    },
-    {
-      "title": "Free Alcohol 2000s Party",
-      "start": "2026-11-27T23:59:00+02:00",
-      "venue": "מועדון הדופלקס",
-      "city": "תל אביב",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://duplexclub.co.il/event/2192/",
-      "source": "tickchak",
-      "price": "119.00"
-    },
-    {
-      "title": "עמרי סמדר X להקת מחול ליאור תבורי | DRIFT",
-      "start": "2026-11-28T18:00:00+02:00",
-      "venue": "בית תמי - מרכז קהילתי לב תל-אביב",
-      "city": "תל אביב",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.eventer.co.il/smadarxtavori",
-      "source": "tickchak",
-      "price": "130.00"
-    },
-    {
-      "title": "עמרי סמדר X להקת מחול ליאור תבורי | DRIFT",
-      "start": "2026-11-28T20:30:00+02:00",
-      "venue": "בית תמי - מרכז קהילתי לב תל-אביב",
-      "city": "תל אביב",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.eventer.co.il/smadarxtavori2030",
-      "source": "tickchak",
-      "price": "130.00"
-    },
-    {
-      "title": "BUBBLES x ASHER SWISSA x KINO TODO | FOREVER IN MOTION | 28.11 | 22:30",
-      "start": "2026-11-28T22:30:00+02:00",
-      "venue": "Shalvata TLV - שלוותה נמל תל אביב, התערוכה, תל אביב-יפו, ישראל",
-      "city": "תל אביב",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.eventer.co.il/events/nss4f",
-      "source": "tickchak",
-      "price": "80.00"
     },
     {
       "title": "אירוע חנוכה - תהלוכה מסורתית ומסיבת אזניות בבית ספר המנחיל",
