@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-26T00:56:18.435970+02:00",
+  "updatedAt": "2026-11-26T15:24:13.644389+02:00",
   "sources": [
     {
       "id": "makore",
@@ -39,6 +39,17 @@
     }
   ],
   "events": [
+    {
+      "title": "בדרך ליציאה – עוצרים בורדיאל",
+      "start": "2026-11-26T18:00:00Z",
+      "venue": "בית הצעירים ורדיאל 17, ורדיאל 17, תל אביב - יפו",
+      "city": "תל אביב-יפו",
+      "lat": 32.0853,
+      "lon": 34.7818,
+      "url": "https://www.makore.co.il/event/f811c930aada09b27e18798acfa0b93b3088be49b7c1a14e48d764f6fcfdb65c",
+      "source": "makore",
+      "price": "0"
+    },
     {
       "title": "Thursday TEMPLE | CAPPELLA 26.11",
       "start": "2026-11-26T18:30:00Z",
@@ -357,17 +368,6 @@
       "url": "https://www.makore.co.il/event/6407d563274552341a3a14dc06a9a68a97b5f11a126e95fa86a6438cb80c3e57",
       "source": "makore",
       "price": "80"
-    },
-    {
-      "title": "מסיבת MTV 📺✨",
-      "start": "2026-11-27T20:00:00Z",
-      "venue": "אוזן בר תל אביב",
-      "city": "תל אביב-יפו",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://www.makore.co.il/event/a44f3bf2f4127221afbff6d98a22ea0ca6b761d22fe94fde8e29b4db5b9a27d6",
-      "source": "makore",
-      "price": null
     },
     {
       "title": "שישי חופשי | FREE ALCOHOL ❤️",
