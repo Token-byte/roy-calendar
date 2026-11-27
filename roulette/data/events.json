@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-27T00:48:30.705473+02:00",
+  "updatedAt": "2026-11-27T15:21:53.478214+02:00",
   "sources": [
     {
       "id": "makore",
@@ -10,7 +10,7 @@
     {
       "id": "tickchak",
       "ok": true,
-      "count": 8,
+      "count": 5,
       "error": null
     },
     {
@@ -23,7 +23,7 @@
       "id": "eventbrite",
       "ok": false,
       "count": 0,
-      "error": "HTTPError: HTTP Error 405: Not Allowed"
+      "error": "RuntimeError: no JSON-LD events"
     },
     {
       "id": "tixwise",
@@ -39,39 +39,6 @@
     }
   ],
   "events": [
-    {
-      "title": "Backstreet Boys 90s Party",
-      "start": "2026-11-26T22:00:00+02:00",
-      "venue": "מועדון הדופלקס",
-      "city": "תל אביב",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://duplexclub.co.il/event/869/",
-      "source": "tickchak",
-      "price": "89.00"
-    },
-    {
-      "title": "METALLICA – THE BLACK ALBUM 35TH ANNIVERSARY PARTY!",
-      "start": "2026-11-26T22:00:00+02:00",
-      "venue": "מועדון הדופלקס",
-      "city": "תל אביב",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://duplexclub.co.il/event/2143/",
-      "source": "tickchak",
-      "price": "89.00"
-    },
-    {
-      "title": "OLD SCHOOL HIP HOP PARTY",
-      "start": "2026-11-26T22:00:00+02:00",
-      "venue": "מועדון הדופלקס",
-      "city": "תל אביב",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://duplexclub.co.il/event/2199/",
-      "source": "tickchak",
-      "price": "89.00"
-    },
     {
       "title": "Arazi 27.11",
       "start": "2026-11-27T16:00:00Z",
