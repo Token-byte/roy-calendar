@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-28T00:28:48.985612+02:00",
+  "updatedAt": "2026-11-28T14:36:20.204054+02:00",
   "sources": [
     {
       "id": "makore",
@@ -10,7 +10,7 @@
     {
       "id": "tickchak",
       "ok": true,
-      "count": 5,
+      "count": 3,
       "error": null
     },
     {
@@ -39,28 +39,6 @@
     }
   ],
   "events": [
-    {
-      "title": "FREE ALCOHOL PARTY",
-      "start": "2026-11-27T23:59:00+02:00",
-      "venue": "מועדון הדופלקס",
-      "city": "תל אביב",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://duplexclub.co.il/event/837/",
-      "source": "tickchak",
-      "price": "119.00"
-    },
-    {
-      "title": "Free Alcohol 2000s Party",
-      "start": "2026-11-27T23:59:00+02:00",
-      "venue": "מועדון הדופלקס",
-      "city": "תל אביב",
-      "lat": 32.0853,
-      "lon": 34.7818,
-      "url": "https://duplexclub.co.il/event/2192/",
-      "source": "tickchak",
-      "price": "119.00"
-    },
     {
       "title": "הרקדה שבועית בחוף גורדון",
       "start": "2026-11-28T17:00:00Z",
@@ -235,7 +213,7 @@
       "lon": 34.8706,
       "url": "https://www.makore.co.il/event/28edbe5867042a8433b2aa63eb0ee065b64856306ef21ce7fadb4113374053da",
       "source": "makore",
-      "price": null
+      "price": "0"
     },
     {
       "title": "רוחמה קוץ – ערב בינגו מוסיקלי",
